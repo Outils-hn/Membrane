@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, PRODUITS } from "../js/core.js";
+import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS } from "../js/core.js";
+
+const proche = (a, b, m) => assert.ok(Math.abs(a - b) < 1e-6, `${m ?? ""} ${a} ≠ ${b}`);
 
 const z = (extra = {}) => ({
-  produit: "outplus", mesure: false, longueur: "12", cordon: "45", facade: "Nord", etage: "R+1", plan: "101",
+  produit: "outplus", mesure: false, longueur: "12", facade: "Nord", etage: "R+1", plan: "101",
   segs: [{ len: "100", dir: "E", on: true }, { len: "40", dir: "SE", on: false }, { len: "80", dir: "E", on: true }],
   ...extra,
 });
@@ -50,14 +52,45 @@ test("cordon au bout libre : premier troncon au depart, dernier a l'arrivee, mil
   assert.deepEqual(positionCordon(0, 2, 30, 45), [0, 1]); // plus court que le cordon : tout le troncon
 });
 
-test("bande en Z de 12 m : 2 cordons de 12 m = 24 m, 4 cartouches, un rouleau de 250", () => {
+test("reglages : valeurs par defaut, 0 accepte pour la marge et le recouvrement, invalide = defaut", () => {
+  const d = reglages({});
+  assert.equal(d.cordon, 45); assert.equal(d.cartouche, 10); assert.equal(d.marge, 0); proche(d.recouvrement, 0.05);
+  const r = reglages({ cordon: "50", cartouche: "7,5", marge: "10", recouvrement: "0" });
+  assert.equal(r.cordon, 50); assert.equal(r.cartouche, 7.5); proche(r.marge, 0.1); assert.equal(r.recouvrement, 0);
+  const x = reglages({ cordon: "abc", cartouche: "-3", marge: "-5", recouvrement: "" });
+  assert.equal(x.cordon, 45); assert.equal(x.cartouche, 10); assert.equal(x.marge, 0); proche(x.recouvrement, 0.05);
+});
+
+test("pieces d'une bande : marge, recouvrement de 5 cm, coupe en pieces de 25 m au plus", () => {
+  const a = piecesBande(12, 0, 0.05); proche(a.total, 12.05); assert.deepEqual(a.pieces.map((p) => +p.toFixed(2)), [12.05]);
+  const m = piecesBande(12, 0.1, 0.05); proche(m.net, 13.2); proche(m.total, 13.25);
+  const l = piecesBande(30, 0, 0.05); proche(l.total, 30.1); assert.deepEqual(l.pieces.map((p) => +p.toFixed(2)), [25, 5.1]);
+  assert.equal(piecesBande(24.95, 0, 0.05).pieces.length, 1); // 24,95 + 0,05 = 25 : un rouleau pile
+  assert.equal(piecesBande(25, 0, 0.05).pieces.length, 2);
+});
+
+test("pieces rangees dans les rouleaux de 25 m, les plus longues d'abord", () => {
+  assert.equal(rangerRouleaux([12.05, 12.05, 8.55]).length, 2); // 24,1 puis 8,55
+  assert.equal(rangerRouleaux([12.05, 12.05, 12.05]).length, 2); // 3 pieces de 12,05 ne tiennent pas dans un rouleau
+  assert.equal(rangerRouleaux([20, 6, 5, 4]).length, 2);
+});
+
+test("bande en Z de 12 m : 2 cordons de 12,05 m = 24,1 m, 3 cartouches (10 m), un rouleau de 250", () => {
   const r = calculBande(z());
-  assert.equal(r.dev, 220); assert.equal(r.roll.largeur, 250); assert.equal(r.nCollés, 2); assert.equal(r.cordonM, 24);
-  assert.deepEqual(r.alertes, []);
+  assert.equal(r.dev, 220); assert.equal(r.roll.largeur, 250); assert.equal(r.nCollés, 2); proche(r.cordonM, 24.1);
+  assert.equal(r.cartouches, 3); assert.equal(r.rouleaux, 1); assert.deepEqual(r.alertes, []);
   const c = commande([z()]);
-  assert.equal(c.cartouches, 4); // 24 / 7,5 = 3,2 -> 4
+  assert.equal(c.cartouches, 3);
   assert.equal(c.articles.length, 1); assert.equal(c.articles[0].rouleaux, 1); assert.equal(c.articles[0].largeur, 250);
   assert.equal(c.cartons, 1);
+  // cas defavorable choisi : 7,5 m par cartouche
+  assert.equal(commande([z()], { cartouche: "7,5" }).cartouches, 4); // 24,1 / 7,5 = 3,2 -> 4
+});
+
+test("marge : allonge la bande et le cordon", () => {
+  const c = commande([z()], { marge: "10" }); // 12 x 1,1 + 0,05 = 13,25 m ; cordon 26,5 m
+  proche(c.articles[0].metres, 13.25); proche(c.cordonM, 26.5); assert.equal(c.cartouches, 3);
+  proche(c.articles[0].chutes, 25 - 13.25);
 });
 
 test("alertes : rien de colle, troncon plus court que le cordon, bande trop large", () => {
@@ -67,11 +100,18 @@ test("alertes : rien de colle, troncon plus court que le cordon, bande trop larg
   assert.equal(calculBande(z({ longueur: "" })), null);
 });
 
-test("commande : les longueurs d'une meme largeur s'additionnent avant d'arrondir aux rouleaux de 25 m", () => {
+test("commande : recouvrement, rangement dans les rouleaux et chutes", () => {
   const a = z({ longueur: "12" }), b = z({ longueur: "12", etage: "R+2" }), c3 = z({ longueur: "8,5", etage: "RDC" });
   const c = commande([a, b, c3]);
-  assert.equal(c.articles[0].metres, 32.5); assert.equal(c.articles[0].rouleaux, 2);
-  assert.equal(Math.round(c.cordonM), 65); assert.equal(c.cartouches, 9); // 65 / 7,5 = 8,67 -> 9
+  const art = c.articles[0];
+  proche(art.metres, 32.65); proche(art.net, 32.5); proche(art.recouvrement, 0.15);
+  assert.equal(art.rouleaux, 2); proche(art.chutes, 50 - 32.65);
+  proche(c.cordonM, 65.3); assert.equal(c.cartouches, 7); // 65,3 / 10 = 6,53 -> 7
+});
+
+test("commande : sans recouvrement ni marge, on retrouve le calcul brut", () => {
+  const c = commande([z({ longueur: "12" }), z({ longueur: "12" }), z({ longueur: "8,5" })], { recouvrement: "0" });
+  proche(c.articles[0].metres, 32.5); assert.equal(c.articles[0].rouleaux, 2);
 });
 
 test("commande : produits et largeurs separes, classes dans l'ordre des produits", () => {

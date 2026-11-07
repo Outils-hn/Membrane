@@ -28,9 +28,9 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   verif("Titre Membrane", (await page.title()) === "Membrane");
   verif("Trois troncons de depart", (await page.locator("#segs .row").count()) === 3);
   verif("Bande depliee 220 mm : rouleau de 250 mm", /^rouleau de 250 mm$/.test(await txt(page, "#rRoulL")), await txt(page, "#rRoulL"));
-  verif("2 cordons de 12 m : 4 cartouches", (await txt(page, "#rCart")) === "4", await txt(page, "#rCart"));
+  verif("2 cordons de 12,05 m (recouvrement 5 cm) = 24,1 m : 3 cartouches de 10 m", (await txt(page, "#rCart")) === "3", await txt(page, "#rCart"));
   verif("Un rouleau", (await txt(page, "#rRoul")) === "1");
-  verif("Explication du calcul", /Bande dépliée : 220 mm.*2 cordons × 12,0 m = 24,0 m.*7,5 m par cartouche/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
+  verif("Explication du calcul", /Bande dépliée : 220 mm.*2 cordons × 12,05 m = 24,1 m.*10 m par cartouche/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   verif("Dessin : 3 troncons cliquables, 2 cordons de colle", (await page.locator("#dessin .hit").count()) === 3 && (await page.locator("#dessin .glue").count()) === 2);
   verif("Les produits sont proposes (3)", (await page.locator("#produit option").count()) === 3);
   verif("Pas de commande tant qu'on n'a rien ajoute", await page.locator("#cmd").evaluate((el) => el.classList.contains("hidden")));
@@ -41,7 +41,7 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
 await step("Dessin : toucher un troncon, ajouter, supprimer, direction", async () => {
   const { c, page } = await ouvrir();
   await page.locator("#dessin .hit").nth(1).dispatchEvent("click");
-  verif("Toucher le pont le colle : 3 cordons, 36 m, 5 cartouches", (await page.locator("#dessin .glue").count()) === 3 && (await txt(page, "#rCart")) === "5", `${await page.locator("#dessin .glue").count()} / ${await txt(page, "#rCart")}`);
+  verif("Toucher le pont le colle : 3 cordons, 36,15 m, 4 cartouches", (await page.locator("#dessin .glue").count()) === 3 && (await txt(page, "#rCart")) === "4", `${await page.locator("#dessin .glue").count()} / ${await txt(page, "#rCart")}`);
   verif("Le bouton du troncon passe a « Collé »", /Collé/.test(await txt(page, "#segs .row:nth-child(2) .tg")));
   await page.locator("#segs .row:nth-child(2) .tg").click();
   verif("Le bouton le remet en « Libre »", (await page.locator("#dessin .glue").count()) === 2);
@@ -85,6 +85,23 @@ await step("Largeurs : standard, sur mesure, produits, alertes", async () => {
   await c.close();
 });
 
+await step("Reglages : colle 7,5 m, marge, recouvrement", async () => {
+  const { c, page } = await ouvrir();
+  await page.click("#reglages summary");
+  verif("Reglages par defaut : 10 m, marge 0 %, recouvrement 5 cm", (await page.inputValue("#cartouche")) === "10" && (await page.inputValue("#marge")) === "0" && (await page.inputValue("#recouvrement")) === "5");
+  verif("Le choix 10 m est indique comme courant", /10 m\s*courant/.test(await txt(page, "#cartSeg")) && (await page.locator("#cartSeg button.on").count()) === 1, await txt(page, "#cartSeg"));
+  await page.click("#cartSeg button[data-m='7.5']");
+  verif("Cas defavorable 7,5 m : 4 cartouches", (await txt(page, "#rCart")) === "4" && (await page.inputValue("#cartouche")) === "7,5", await txt(page, "#rCart"));
+  await page.click("#cartSeg button[data-m='10']");
+  await page.fill("#marge", "10");
+  verif("Marge 10 % : explication mise a jour", /marge 10 %.*13,25 m/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
+  await page.fill("#recouvrement", "0"); await page.fill("#marge", "0");
+  verif("Sans marge ni recouvrement : 12,00 m, 24,0 m de cordon", /= 12,00 m.*24,0 m/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
+  await page.reload();
+  verif("Les reglages sont gardes apres rechargement", (await page.inputValue("#recouvrement")) === "0");
+  await c.close();
+});
+
 await step("Commande : ajouter, classer, modifier, supprimer, totaux", async () => {
   const { c, page } = await ouvrir();
   const ajouter = async (facade, etage, plan, longueur) => {
@@ -102,13 +119,13 @@ await step("Commande : ajouter, classer, modifier, supprimer, totaux", async () 
   const nord = await page.locator("#cmdLignes .tscroll").nth(1).locator("tbody tr td:first-child").allInnerTexts();
   verif("Etages classes (R+1 avant R+2)", nord.join("|") === "R+1|R+2", nord.join("|"));
   const total = await txt(page, "#cmdTotal");
-  verif("Total : 2 rouleaux de 250 mm (32,5 m)", /Outdoor plus, 250 mm, rouleau de 25 m 2 32,5 m de bande/.test(total), total);
-  verif("Total colle : 9 cartouches (65 m)", /SikaBond-444 Membrane Fix, 600 ml 9 65,0 m de cordon \(1 carton de 20\)/.test(total), total);
+  verif("Total : 2 rouleaux de 250 mm, recouvrement et chutes comptes", /Outdoor plus, 250 mm, rouleau de 25 m 2 32,5 m de bande \+ 0,15 m de recouvrement ; chutes : 17,3 m/.test(total), total);
+  verif("Total colle : 7 cartouches (65,3 m a 10 m)", /SikaBond-444 Membrane Fix, 600 ml 7 65,3 m de cordon, à 10 m par cartouche \(1 carton de 20\)/.test(total), total);
   await page.locator("#cmdLignes button[data-a='edit']").first().click();
   verif("Modifier recharge la ligne dans l'editeur", (await page.inputValue("#facade")) === "Est" && (await txt(page, "#ajouter")) === "Mettre à jour la ligne");
   await page.fill("#longueur", "26");
   await page.click("#ajouter");
-  verif("Mise a jour : 26 m + 12 m + 12 m = 50 m, 2 rouleaux", /Outdoor plus, 250 mm, rouleau de 25 m 2 50,0 m de bande/.test(await txt(page, "#cmdTotal")), await txt(page, "#cmdTotal"));
+  verif("Mise a jour : 26 m + 12 m + 12 m, la piece de 1,1 m ne tient pas dans le reste : 3 rouleaux", /Outdoor plus, 250 mm, rouleau de 25 m 3 50,0 m de bande \+ 0,20 m de recouvrement/.test(await txt(page, "#cmdTotal")), await txt(page, "#cmdTotal"));
   await page.locator("#cmdLignes button[data-a='del']").first().click();
   verif("Supprimer enleve une ligne", (await page.locator("#cmdLignes tbody tr").count()) === 2);
   await page.screenshot({ path: `${OUT}/03-commande.png`, fullPage: true });
@@ -128,7 +145,7 @@ await step("Exports : Excel et PDF", async () => {
   await page.click("#xlsBtn");
   await page.waitForFunction(() => document.getElementById("toast").textContent.includes("Copié"), null, { timeout: 4000 });
   const presse = await page.evaluate(() => navigator.clipboard.readText());
-  verif("Copie Excel : lignes separees par des tabulations", /Façade\tÉtage\tPlan/.test(presse) && /Nord\tR\+1\t101\tSikaMembran Outdoor plus\t250\t12,0\t2\t24,0/.test(presse), presse.slice(0, 160).replace(/\t/g, "→").replace(/\n/g, "⏎"));
+  verif("Copie Excel : lignes separees par des tabulations", /Façade\tÉtage\tPlan/.test(presse) && /Nord\tR\+1\t101\tSikaMembran Outdoor plus\t250\t12,0\t12,05\t2\t24,1/.test(presse), presse.slice(0, 160).replace(/\t/g, "→").replace(/\n/g, "⏎"));
   const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 15000 }), page.click("#pdfBtn")]);
   verif("PDF telecharge, nom date", /^Commande membranes - \d{4}-\d{2}-\d{2}\.pdf$/.test(dl.suggestedFilename()), dl.suggestedFilename());
   const chemin = `${OUT}/bon-de-commande.pdf`;
@@ -152,7 +169,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.0", /Membrane v1\.0/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.1", /Membrane v1\.1/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
   verif("Le menu liste Membrane et les autres applis", /Membrane Étanchéité ✓/.test(menu) && /Joint Dilatation et joints/.test(menu), menu.slice(0, 200));
