@@ -37,7 +37,7 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   verif("Les produits sont proposes (3), avec leur role", (await page.locator("#produitSel .sel-pop button").count()) === 3 && /pare-pluie/.test(await txt(page, "#produitSel .sel-pop")), await txt(page, "#produitSel .sel-pop"));
   await page.keyboard.press("Escape");
   verif("Echap ferme la liste", await page.locator("#produitSel .sel-pop").evaluate((el) => el.classList.contains("hidden")));
-  verif("Pas de commande tant qu'on n'a rien ajoute", await page.locator("#cmd").evaluate((el) => el.classList.contains("hidden")));
+  verif("Pas de lignes tant qu'on n'a rien ajoute (le message d'attente est visible)", await page.locator("#cmdPlein").evaluate((el) => el.classList.contains("hidden")) && await page.locator("#cmdVide").isVisible());
   await page.screenshot({ path: `${OUT}/01-depart.png`, fullPage: true });
   await c.close();
 });
@@ -156,7 +156,7 @@ await step("Commande : ajouter, classer, modifier, supprimer, totaux", async () 
     await page.click("#ajouter");
   };
   await ajouter("Nord", "R+2", "101", "12");
-  verif("La commande apparait apres le premier ajout", !(await page.locator("#cmd").evaluate((el) => el.classList.contains("hidden"))));
+  verif("La commande apparait apres le premier ajout", !(await page.locator("#cmdPlein").evaluate((el) => el.classList.contains("hidden"))) && !(await page.locator("#cmdVide").isVisible()));
   verif("Apres l'ajout, la bande repart d'un dessin neuf en gardant facade et etage", (await page.inputValue("#facade")) === "Nord" && (await page.inputValue("#etage")) === "R+2" && (await page.inputValue("#plan")) === "");
   await ajouter("Est", "RDC", "102", "8,5");
   await ajouter("Nord", "R+1", "101", "12");
@@ -181,7 +181,7 @@ await step("Commande : ajouter, classer, modifier, supprimer, totaux", async () 
   await page.click("#viderBtn");
   verif("Vider demande une confirmation", (await page.locator("#cmdLignes tbody tr").count()) === 2);
   await page.click("#viderBtn");
-  verif("Deuxieme clic : commande videe", await page.locator("#cmd").evaluate((el) => el.classList.contains("hidden")));
+  verif("Deuxieme clic : commande videe", await page.locator("#cmdPlein").evaluate((el) => el.classList.contains("hidden")));
   await c.close();
 });
 
@@ -216,7 +216,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.3", /Membrane v1\.3/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.4", /Membrane v1\.4/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
   verif("Le menu liste Membrane et les autres applis", /Membrane Étanchéité ✓/.test(menu) && /Joint Dilatation et joints/.test(menu), menu.slice(0, 200));
