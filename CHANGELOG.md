@@ -2,6 +2,11 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.3 — 7 novembre 2026
+
+- Nouveauté : Membrane a une bibliothèque de produits, comme Strate : on y voit les largeurs disponibles de chaque membrane et on peut ajouter les produits d'autres fournisseurs (largeurs en stock ou sur demande, longueur du rouleau), les modifier ou les supprimer. Le fournisseur apparaît dans la commande.
+- Les listes à dérouler (produit, direction des tronçons) reprennent le style de Joint, et la phrase d'accroche du bandeau est retirée.
+
 ## 1.2 — 7 novembre 2026
 
 - Correction : dans le menu des applis, le nom « Membrane » ne touche plus sa description.

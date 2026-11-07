@@ -3,11 +3,51 @@
 // de SikaBond-444 Membrane Fix, place au bout libre du troncon. On en deduit la colle et les rouleaux.
 
 /** Produits proposes. Largeurs de rouleau standard en mm (fiches Sika), rouleaux de 25 m. « surDemande » : largeur disponible seulement sur demande. */
-export const PRODUITS = {
-  outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400] },
-  uni: { nom: "SikaMembran Universal", court: "Universal", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400] },
-  out: { nom: "SikaMembran Outdoor", court: "Outdoor", role: "", largeurs: [100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000, 1200, 1400], surDemande: [] },
+export const PRODUITS_DEFAUT = {
+  outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", fournisseur: "Sika", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400], rouleauM: 25 },
+  uni: { nom: "SikaMembran Universal", court: "Universal", fournisseur: "Sika", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400], rouleauM: 25 },
+  out: { nom: "SikaMembran Outdoor", court: "Outdoor", fournisseur: "Sika", role: "", largeurs: [100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000, 1200, 1400], surDemande: [], rouleauM: 25 },
 };
+
+/** La bibliotheque en cours (modifiable : produits d'autres fournisseurs). Remplie par chargerCatalogue. */
+export const PRODUITS = {};
+
+/**
+ * Remplace la bibliotheque par « obj » (lu du navigateur ou saisi) apres nettoyage : nom obligatoire, largeurs en mm
+ * (au moins une), « sur demande » = largeurs en plus, longueur de rouleau en m (25 par defaut).
+ * Vide ou illisible = produits d'origine. Rend la bibliotheque.
+ */
+export function chargerCatalogue(obj) {
+  const propre = {};
+  if (obj && typeof obj === "object") {
+    for (const [k, p] of Object.entries(obj)) {
+      if (!p || typeof p !== "object" || typeof p.nom !== "string" || !p.nom.trim()) continue;
+      const nums = (l) => [...new Set((Array.isArray(l) ? l : []).map(Number).filter((n) => Number.isFinite(n) && n > 0).map((n) => Math.round(n)))];
+      const sd = nums(p.surDemande), std = nums(p.largeurs);
+      const largeurs = [...new Set([...std, ...sd])].sort((a, b) => a - b);
+      if (!largeurs.length) continue;
+      const m = Number(p.rouleauM);
+      propre[String(k)] = {
+        nom: p.nom.trim(), court: (typeof p.court === "string" && p.court.trim()) || p.nom.trim(),
+        fournisseur: typeof p.fournisseur === "string" ? p.fournisseur.trim() : "", role: typeof p.role === "string" ? p.role.trim() : "",
+        largeurs, surDemande: sd.filter((n) => largeurs.includes(n)).sort((a, b) => a - b), rouleauM: Number.isFinite(m) && m > 0 ? m : 25,
+      };
+    }
+  }
+  const src = Object.keys(propre).length ? propre : structuredClone(PRODUITS_DEFAUT);
+  for (const k of Object.keys(PRODUITS)) delete PRODUITS[k];
+  Object.assign(PRODUITS, src);
+  return PRODUITS;
+}
+chargerCatalogue(null);
+
+/** Nom a afficher d'un produit : le fournisseur est ajoute s'il n'est pas deja dans le nom. */
+export function libelleProduit(id) {
+  const p = PRODUITS[id]; if (!p) return "(produit supprime)";
+  return p.fournisseur && !p.nom.toLowerCase().includes(p.fournisseur.toLowerCase()) ? `${p.nom} (${p.fournisseur})` : p.nom;
+}
+/** Longueur d'un rouleau de ce produit, en m. */
+export const longueurRouleau = (id) => PRODUITS[id]?.rouleauM ?? ROULEAU_M;
 
 /** La colle : cartouche (portion tubulaire) de 600 ml ; la fiche Sika donne 7,5 a 10 m de membrane par cartouche (10 m par defaut, 7,5 m = cas defavorable) ; cartons de 20. */
 export const COLLE = { nom: "SikaBond-444 Membrane Fix", ml: 600, metresParCartouche: 10, choixMetres: [10, 7.5], parCarton: 20, cordonMm: 45 };
@@ -61,8 +101,8 @@ export const developpe = (segs) => segs.reduce((t, s) => t + pos(s.len), 0);
  * sur mesure = exactement la largeur de la bande (le fournisseur la coupe), arrondie au mm superieur.
  */
 export function largeurRouleau(produit, dev, mesure) {
-  const p = PRODUITS[produit] ?? PRODUITS.outplus;
-  if (!(dev > 0)) return null;
+  const p = PRODUITS[produit];
+  if (!p || !(dev > 0)) return null;
   if (mesure) return { largeur: Math.ceil(dev - 1e-9), mesure: true, surDemande: true, depasse: false };
   const l = p.largeurs.find((w) => w >= dev - 1e-9);
   if (l === undefined) return { largeur: p.largeurs[p.largeurs.length - 1], mesure: false, surDemande: false, depasse: true };
@@ -87,13 +127,13 @@ export function positionCordon(i, n, len, cw) {
  * Une bande plus longue qu'un rouleau est coupee en pieces de 25 m au plus, chacune recouvrant la suivante.
  * Rend la longueur totale et la liste des pieces (m).
  */
-export function piecesBande(run, marge, recouvrement) {
+export function piecesBande(run, marge, recouvrement, L = ROULEAU_M) {
   const n = run * (1 + marge);
-  const k = Math.max(1, Math.ceil(n / (ROULEAU_M - recouvrement) - 1e-9));
+  const k = Math.max(1, Math.ceil(n / (L - recouvrement) - 1e-9));
   const total = n + recouvrement * k;
   const pieces = [];
-  for (let i = 0; i < k - 1; i++) pieces.push(ROULEAU_M);
-  pieces.push(total - ROULEAU_M * (k - 1));
+  for (let i = 0; i < k - 1; i++) pieces.push(L);
+  pieces.push(total - L * (k - 1));
   return { net: n, total, pieces };
 }
 
@@ -111,13 +151,14 @@ export function calculBande(b, reg = {}) {
   if (roll?.depasse) alertes.push(`La bande (${fmt(dev, 0)} mm) dépasse le plus grand rouleau de ce produit (${roll.largeur} mm).`);
   if (!collés.length) alertes.push("Aucun tronçon n'est collé : pas de colle à prévoir.");
   for (const { s, i } of collés) if (pos(s.len) < cw) alertes.push(`Le tronçon ${i + 1} (${fmt(pos(s.len), 0)} mm) est plus court que le cordon de colle (${fmt(cw, 0)} mm).`);
-  const pc = piecesBande(run, g.marge, g.recouvrement);
+  const L = longueurRouleau(b.produit);
+  const pc = piecesBande(run, g.marge, g.recouvrement, L);
   return {
-    dev, roll, run, cw, nCollés: collés.length,
+    dev, roll, run, cw, rouleauM: L, nCollés: collés.length,
     longueur: pc.total, pieces: pc.pieces,
     cordonM: collés.length * pc.total,
     cartouches: Math.ceil((collés.length * pc.total) / g.cartouche - 1e-9),
-    rouleaux: Math.ceil(pc.total / ROULEAU_M - 1e-9),
+    rouleaux: Math.ceil(pc.total / L - 1e-9),
     alertes,
   };
 }
@@ -136,11 +177,11 @@ export function rangEtage(e) {
 export const triNaturel = (a, b) => String(a).localeCompare(String(b), "fr", { numeric: true, sensitivity: "base" });
 
 /** Range des pieces (m) dans des rouleaux de 25 m, les plus longues d'abord : rend les rouleaux (liste de pieces). */
-export function rangerRouleaux(pieces) {
+export function rangerRouleaux(pieces, L = ROULEAU_M) {
   const rouleaux = [];
   for (const p of pieces.slice().sort((a, b) => b - a)) {
     const r = rouleaux.find((x) => x.reste >= p - 1e-9);
-    if (r) { r.reste -= p; r.pieces.push(p); } else rouleaux.push({ reste: ROULEAU_M - p, pieces: [p] });
+    if (r) { r.reste -= p; r.pieces.push(p); } else rouleaux.push({ reste: L - p, pieces: [p] });
   }
   return rouleaux;
 }
@@ -161,14 +202,14 @@ export function commande(lignes, reg = {}) {
     calculees.push({ ligne: l, r });
     cordonM += r.cordonM;
     const cle = `${l.produit}|${r.roll.largeur}|${r.roll.mesure ? 1 : 0}`;
-    const e = groupesRoul.get(cle) ?? { produit: l.produit, largeur: r.roll.largeur, mesure: r.roll.mesure, surDemande: r.roll.surDemande, metres: 0, net: 0, pieces: [] };
+    const e = groupesRoul.get(cle) ?? { produit: l.produit, largeur: r.roll.largeur, mesure: r.roll.mesure, surDemande: r.roll.surDemande, rouleauM: r.rouleauM, metres: 0, net: 0, pieces: [] };
     e.metres += r.longueur; e.net += r.run; e.pieces.push(...r.pieces);
     groupesRoul.set(cle, e);
   }
   const ordre = Object.keys(PRODUITS);
   const articles = [...groupesRoul.values()].map((e) => {
-    const rouleaux = rangerRouleaux(e.pieces);
-    return { ...e, rouleaux: rouleaux.length, chutes: rouleaux.length * ROULEAU_M - e.metres, recouvrement: e.metres - e.net };
+    const rouleaux = rangerRouleaux(e.pieces, e.rouleauM);
+    return { ...e, rouleaux: rouleaux.length, chutes: rouleaux.length * e.rouleauM - e.metres, recouvrement: e.metres - e.net };
   }).sort((a, b) => ordre.indexOf(a.produit) - ordre.indexOf(b.produit) || a.largeur - b.largeur);
   const cartouches = Math.ceil(cordonM / g.cartouche - 1e-9);
   // Facades triees (sans facade a la fin), etages par rang puis ordre naturel
