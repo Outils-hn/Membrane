@@ -317,7 +317,7 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.1 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => toast("Membrane v1.2 · conçu et développé par Hugo N."));
 
 // ---------- Demarrage ----------
 lignesTroncons(); maj(); afficherCommande();
