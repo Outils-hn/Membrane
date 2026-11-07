@@ -223,7 +223,7 @@ function maj() {
 const nomProduit = (l, r) => `${PRODUITS[l.produit]?.court ?? "?"} ${r.roll.largeur} mm${r.roll.mesure ? " (sur mesure)" : ""}`;
 const deuxPoints = (n) => fmt(n, 1);
 function afficherCommande() {
-  $("cmd").classList.toggle("hidden", !lignes.length);
+  $("cmdPlein").classList.toggle("hidden", !lignes.length); $("cmdVide").classList.toggle("hidden", !!lignes.length);
   if (!lignes.length) return;
   const c = commande(lignes, reg);
   $("cmdLignes").innerHTML = c.facades.map((g) => `<div class="fh">${g.facade ? "Façade " + esc(g.facade) : "Sans façade"}</div>
@@ -360,7 +360,7 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.3 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => toast("Membrane v1.4 · conçu et développé par Hugo N."));
 
 // ---------- Bibliotheque : voir les largeurs, ajouter / modifier / supprimer des produits ----------
 const mmListe = (l) => l.join(", ");
