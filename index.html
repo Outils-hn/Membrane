@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.2">
+<link rel="stylesheet" href="styles.css?v=1.3">
 </head>
 <body>
 <header class="topbar">
@@ -31,7 +31,7 @@
         <div class="apps-menu" id="appsList"></div>
       </details>
     </div>
-    <span class="tagline">Étanchéité : la colle et les rouleaux à commander</span>
+    <span class="grow"></span>
     <button class="pill" id="themeBtn" title="Changer de thème"></button>
   </div>
 </header>
@@ -44,7 +44,7 @@
       <label class="f"><span class="lbl">Étage</span><input id="etage" autocomplete="off" placeholder="ex. R+1"></label>
       <label class="f"><span class="lbl">N° du plan de coupe</span><input id="plan" autocomplete="off" placeholder="ex. 101"></label>
     </div>
-    <label class="f"><span class="lbl">Produit utilisé</span><select id="produit"></select></label>
+    <div class="f"><span class="lbl" id="lProd">Produit utilisé <button type="button" class="linkbtn" id="voirBiblio">Largeurs disponibles, autres produits</button></span><div id="produitSel"></div></div>
 
     <div class="draw" id="dessin" role="img" aria-label="Dessin de la bande de membrane en coupe"></div>
     <p class="legend"><span><i class="k-mem"></i> membrane</span><span><i class="k-glue"></i> cordon de colle, au bout libre</span><span>Touche un tronçon pour le coller ou non</span></p>
@@ -95,9 +95,30 @@
     </div>
     <p class="hint"><button type="button" class="linkbtn" id="viderBtn">Vider la commande</button></p>
   </section>
+
+  <details class="card" id="biblio">
+    <summary><span>Bibliothèque de produits <span class="summary-sub" id="biblioSub"></span></span></summary>
+    <p class="hint" style="margin-top:0">Les largeurs et la longueur des rouleaux de chaque produit. Ajoute les produits d'autres fournisseurs : ils apparaissent dans la liste « Produit utilisé » et dans la commande.</p>
+    <div id="biblioListe"></div>
+    <div class="actions"><button type="button" class="btn ghost" id="biblioNouveau">+ Nouveau produit</button></div>
+    <form id="biblioForm" class="biblio-form hidden" autocomplete="off">
+      <h3 class="sub" id="biblioTitre">Nouveau produit</h3>
+      <div class="duo">
+        <label class="f"><span class="lbl">Nom du produit</span><input id="bNom" placeholder="ex. Isover Vario Xtra"></label>
+        <label class="f"><span class="lbl">Fournisseur</span><input id="bFour" placeholder="ex. Isover"></label>
+        <label class="f"><span class="lbl">Rôle (facultatif)</span><input id="bRole" placeholder="ex. pare-vapeur"></label>
+        <label class="f"><span class="lbl">Longueur d'un rouleau</span><span class="withu"><input id="bLong" inputmode="decimal" placeholder="25"><em>m</em></span></label>
+      </div>
+      <label class="f"><span class="lbl">Largeurs en stock (mm), séparées par des virgules</span><input id="bLarg" inputmode="numeric" placeholder="ex. 100, 150, 200, 250, 300"></label>
+      <label class="f"><span class="lbl">Largeurs sur demande (mm), facultatif</span><input id="bDem" inputmode="numeric" placeholder="ex. 1400"></label>
+      <div class="alertes" id="biblioErr" role="alert"></div>
+      <div class="actions"><button type="submit" class="btn">Enregistrer</button><button type="button" class="btn ghost" id="biblioAnnuler">Annuler</button></div>
+    </form>
+    <p class="hint"><button type="button" class="linkbtn" id="biblioReset">Rétablir les produits d'origine (Sika)</button></p>
+  </details>
 </main>
-<footer>Membrane v1.2 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.2&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.3 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.3&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.2"></script>
+<script type="module" src="js/app.js?v=1.3"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS } from "../js/core.js";
+import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau } from "../js/core.js";
 
 const proche = (a, b, m) => assert.ok(Math.abs(a - b) < 1e-6, `${m ?? ""} ${a} ≠ ${b}`);
 
@@ -132,4 +132,23 @@ test("classement par facade puis par etage (rez avant etages, sous-sols avant le
 test("produits : Outdoor plus a 6 largeurs (dont 1400 sur demande)", () => {
   assert.equal(PRODUITS.outplus.largeurs.length, 6);
   assert.deepEqual(PRODUITS.outplus.surDemande, [1400]);
+});
+
+test("bibliotheque : nettoyage, produit d'un autre fournisseur, retour aux produits d'origine", () => {
+  chargerCatalogue({ x: { nom: " Isover Vario ", fournisseur: "Isocell", role: "pare-vapeur", largeurs: ["1500", "1000", "abc", -5], surDemande: [2000, 1000], rouleauM: "50" }, vide: { nom: "", largeurs: [100] }, sans: { nom: "Sans largeur", largeurs: [] } });
+  assert.deepEqual(Object.keys(PRODUITS), ["x"]);
+  assert.deepEqual(PRODUITS.x.largeurs, [1000, 1500, 2000]); assert.deepEqual(PRODUITS.x.surDemande, [1000, 2000]);
+  assert.equal(PRODUITS.x.nom, "Isover Vario"); assert.equal(PRODUITS.x.court, "Isover Vario"); assert.equal(PRODUITS.x.rouleauM, 50);
+  assert.equal(libelleProduit("x"), "Isover Vario (Isocell)"); assert.equal(longueurRouleau("x"), 50);
+  // rouleaux de 50 m : 30 m = un seul rouleau (et plus deux comme avec 25 m)
+  const r = calculBande({ produit: "x", mesure: false, longueur: "30", segs: [{ len: "900", dir: "E", on: true }] });
+  assert.equal(r.roll.largeur, 1000); assert.equal(r.roll.surDemande, true); assert.equal(r.rouleaux, 1); assert.equal(r.rouleauM, 50);
+  const c = commande([{ produit: "x", mesure: false, longueur: "30", segs: [{ len: "900", dir: "E", on: true }] }]);
+  proche(c.articles[0].chutes, 50 - 30.05); assert.equal(c.articles[0].rouleauM, 50);
+  // produit supprime : ligne ignoree, pas d'erreur
+  assert.equal(commande([z()]).articles.length, 0);
+  chargerCatalogue(null);
+  assert.deepEqual(Object.keys(PRODUITS), Object.keys(PRODUITS_DEFAUT));
+  assert.equal(libelleProduit("outplus"), "SikaMembran Outdoor plus");
+  assert.equal(libelleProduit("inconnu"), "(produit supprime)");
 });

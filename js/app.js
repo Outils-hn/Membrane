@@ -1,5 +1,5 @@
 // Membrane : affichage et saisie. Les calculs sont dans core.js.
-import { PRODUITS, COLLE, ROULEAU_M, DIRS, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages } from "./core.js";
+import { PRODUITS, COLLE, DIRS, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
 const CLE = "membrane.v1";
@@ -10,9 +10,15 @@ const APPLIS = [
 ];
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+// ---------- Bibliotheque de produits (gardee dans le navigateur) ----------
+const CLE_PROD = "membrane.produits";
+try { chargerCatalogue(JSON.parse(localStorage.getItem(CLE_PROD) ?? "null")); } catch (e) { /* stockage bloque : produits d'origine */ }
+const sauverCatalogue = () => { try { localStorage.setItem(CLE_PROD, JSON.stringify(PRODUITS)); } catch (e) { /* ignore */ } };
+const premierProduit = () => Object.keys(PRODUITS)[0];
+
 // ---------- Etat : la bande en cours + la commande (gardes dans le navigateur) ----------
 const NEUF = () => ({
-  facade: "", etage: "", plan: "", produit: "outplus", mesure: false, longueur: "12",
+  facade: "", etage: "", plan: "", produit: PRODUITS.outplus ? "outplus" : premierProduit(), mesure: false, longueur: "12",
   segs: [{ len: "100", dir: "E", on: true }, { len: "40", dir: "SE", on: false }, { len: "80", dir: "E", on: true }],
 });
 let b = NEUF();       // bande en cours de dessin
@@ -66,9 +72,49 @@ appliquerTheme(themeActuel());
 let toastT;
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
 
+// ---------- Menus de choix maison (comme dans Joint) ----------
+const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function selDef(cle) {
+  if (cle === "produit") return { cur: b.produit, set: (k) => { b.produit = k; }, opts: () => Object.entries(PRODUITS).map(([k, p]) => ({ k, nom: p.nom, meta: p.role || p.fournisseur })) };
+  const i = Number(cle.slice(4));
+  return { cur: b.segs[i]?.dir, set: (k) => { b.segs[i].dir = k; }, opts: () => DIRS.map((d) => ({ k: d.id, nom: `${d.fleche} ${d.nom}`, meta: "" })) };
+}
+const selTexte = (cle) => { const d = selDef(cle), o = d.opts().find((x) => x.k === d.cur) ?? d.opts()[0]; return o?.nom ?? ""; };
+const selHtml = (cle, label) => `<div class="sel" data-sel="${cle}"><button type="button" class="sel-btn" aria-haspopup="listbox" aria-expanded="false" aria-label="${esc(label)}"><span class="sel-t">${esc(selTexte(cle))}</span>${CHEV}</button><div class="sel-pop hidden" role="listbox" aria-label="${esc(label)}"></div></div>`;
+function majSelects() { document.querySelectorAll(".sel[data-sel]").forEach((box) => { box.querySelector(".sel-t").textContent = selTexte(box.dataset.sel); }); }
+function fermerMenus(sauf) {
+  document.querySelectorAll(".sel-pop").forEach((pop) => {
+    if (pop.parentElement === sauf) return;
+    pop.classList.add("hidden"); pop.parentElement.querySelector(".sel-btn").setAttribute("aria-expanded", "false");
+  });
+}
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".sel-btn"), choix = e.target.closest(".sel-pop button[data-k]");
+  if (btn) {
+    const box = btn.parentElement, pop = box.querySelector(".sel-pop"), ouvrir = pop.classList.contains("hidden");
+    fermerMenus(ouvrir ? box : null);
+    if (ouvrir) {
+      const d = selDef(box.dataset.sel);
+      pop.innerHTML = d.opts().map((o) => `<button type="button" role="option" data-k="${esc(o.k)}" aria-selected="${o.k === d.cur}">${esc(o.nom)}${o.meta ? `<span class="m">${esc(o.meta)}</span>` : ""}</button>`).join("");
+    }
+    pop.classList.toggle("hidden", !ouvrir); btn.setAttribute("aria-expanded", String(ouvrir));
+    if (ouvrir) (pop.querySelector('[aria-selected="true"]') ?? pop.querySelector("button"))?.focus();
+  } else if (choix) {
+    const box = choix.closest(".sel"); selDef(box.dataset.sel).set(choix.dataset.k);
+    fermerMenus(null); box.querySelector(".sel-btn").focus(); maj();
+  } else if (!e.target.closest(".sel")) fermerMenus(null);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") fermerMenus(null);
+  const pop = e.target.closest?.(".sel-pop");
+  if (pop && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    e.preventDefault();
+    const bs = [...pop.querySelectorAll("button")], i = bs.indexOf(document.activeElement);
+    bs[(i + (e.key === "ArrowDown" ? 1 : -1) + bs.length) % bs.length].focus();
+  }
+});
+
 // ---------- Champs simples ----------
-$("produit").innerHTML = Object.entries(PRODUITS).map(([k, p]) => `<option value="${k}">${p.nom}${p.role ? ` (${p.role})` : ""}</option>`).join("");
-$("produit").addEventListener("change", () => { b.produit = $("produit").value; maj(); });
 for (const k of ["facade", "etage", "plan", "longueur"]) $(k).addEventListener("input", () => { b[k] = $(k).value; maj(); });
 for (const k of Object.keys(REGLAGES_DEFAUT)) $(k).addEventListener("input", () => { reg[k] = $(k).value; maj(); afficherCommande(); });
 $("cartSeg").innerHTML = COLLE.choixMetres.map((m) => `<button type="button" data-m="${m}">${fmt(m, m % 1 ? 1 : 0)} m<br><small>${m === 10 ? "courant" : "défavorable"}</small></button>`).join("");
@@ -81,7 +127,7 @@ function lignesTroncons() {
   $("segs").innerHTML = b.segs.map((s, i) => `<div class="row" data-i="${i}">
     <span class="n">${i + 1}</span>
     <span class="withu"><input data-f="len" inputmode="decimal" autocomplete="off" aria-label="Largeur du tronçon ${i + 1} en mm" value="${esc(s.len)}"><em>mm</em></span>
-    <select data-f="dir" aria-label="Direction du tronçon ${i + 1}">${DIRS.map((d) => `<option value="${d.id}"${d.id === s.dir ? " selected" : ""}>${d.fleche} ${d.nom}</option>`).join("")}</select>
+    ${selHtml(`dir:${i}`, `Direction du tronçon ${i + 1}`)}
     <button type="button" class="tg${s.on ? " on" : ""}" data-f="on" aria-pressed="${s.on}">${s.on ? "Collé" : "Libre"}</button>
     <button type="button" class="x" data-f="del" aria-label="Supprimer le tronçon ${i + 1}">×</button></div>`).join("");
 }
@@ -90,10 +136,6 @@ $("segs").addEventListener("input", (e) => {
   const s = b.segs[Number(row.dataset.i)];
   if (e.target.dataset.f === "len") s.len = e.target.value;
   maj();
-});
-$("segs").addEventListener("change", (e) => {
-  const row = e.target.closest(".row"); if (!row || e.target.dataset.f !== "dir") return;
-  b.segs[Number(row.dataset.i)].dir = e.target.value; maj();
 });
 $("segs").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-f]"); if (!btn) return;
@@ -150,12 +192,13 @@ function maj() {
   for (const k of Object.keys(REGLAGES_DEFAUT)) if ($(k).value !== reg[k]) $(k).value = reg[k];
   const cartNum = reglages(reg).cartouche;
   $("cartSeg").querySelectorAll("button").forEach((x) => { const on = Math.abs(Number(x.dataset.m) - cartNum) < 1e-9; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
-  $("produit").value = b.produit;
+  if (!PRODUITS[b.produit]) b.produit = premierProduit();
+  majSelects();
   $("mesure").querySelectorAll("button").forEach((x) => { const on = (x.dataset.k === "mes") === b.mesure; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
   dessiner();
   const r = calculBande(b, reg);
   const g = reglages(reg);
-  const p = PRODUITS[b.produit];
+  const p = PRODUITS[b.produit] ?? {};
   if (!r || !r.roll) {
     $("rCart").textContent = "—"; $("rRoul").textContent = "—";
     $("rCartL").textContent = "cartouches de colle"; $("rRoulL").textContent = "rouleau";
@@ -177,7 +220,7 @@ function maj() {
 }
 
 // ---------- La commande ----------
-const nomProduit = (l, r) => `${PRODUITS[l.produit].court} ${r.roll.largeur} mm${r.roll.mesure ? " (sur mesure)" : ""}`;
+const nomProduit = (l, r) => `${PRODUITS[l.produit]?.court ?? "?"} ${r.roll.largeur} mm${r.roll.mesure ? " (sur mesure)" : ""}`;
 const deuxPoints = (n) => fmt(n, 1);
 function afficherCommande() {
   $("cmd").classList.toggle("hidden", !lignes.length);
@@ -187,7 +230,7 @@ function afficherCommande() {
     <div class="tscroll"><table class="tbl"><thead><tr><th>Étage</th><th>Plan</th><th>Membrane</th><th class="num">Longueur</th><th class="num">Colle</th><th></th></tr></thead><tbody>${
       g.lignes.map(({ ligne: l, r }) => `<tr${edition === l.id ? ' class="edit"' : ""}><td>${esc(l.etage) || "—"}</td><td>${esc(l.plan) || "—"}</td><td>${esc(nomProduit(l, r))}</td><td class="num">${deuxPoints(r.run)} m</td><td class="num">${r.nCollés} × ${fmt(r.longueur, 2)} m</td><td class="act"><button type="button" data-a="edit" data-id="${l.id}">Modifier</button><button type="button" data-a="del" data-id="${l.id}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`).join("");
   $("cmdTotal").innerHTML = `<div class="tscroll"><table class="tbl"><thead><tr><th>Article</th><th class="num">Quantité</th><th>Détail</th></tr></thead><tbody>${
-    c.articles.map((a) => `<tr><td>${esc(PRODUITS[a.produit].nom)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${ROULEAU_M} m</td><td class="num"><b>${a.rouleaux}</b></td><td>${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m</td></tr>`).join("")
+    c.articles.map((a) => `<tr><td>${esc(libelleProduit(a.produit))}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m</td><td class="num"><b>${a.rouleaux}</b></td><td>${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m</td></tr>`).join("")
   }<tr><td>${esc(COLLE.nom)}, ${COLLE.ml} ml</td><td class="num"><b>${c.cartouches}</b></td><td>${deuxPoints(c.cordonM)} m de cordon, à ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m par cartouche (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})</td></tr></tbody></table></div>`;
 }
 $("ajouter").addEventListener("click", () => {
@@ -219,9 +262,9 @@ $("viderBtn").addEventListener("click", () => {
 function tableauTexte() {
   const c = commande(lignes, reg);
   const l = [["Façade", "Étage", "Plan", "Produit", "Largeur (mm)", "Longueur (m)", "Avec marge et recouvrement (m)", "Tronçons collés", "Cordon (m)"].join("\t")];
-  for (const g of c.facades) for (const { ligne, r } of g.lignes) l.push([g.facade, ligne.etage, ligne.plan, PRODUITS[ligne.produit].nom, r.roll.largeur, fmt(r.run, 1), fmt(r.longueur, 2), r.nCollés, fmt(r.cordonM, 1)].join("\t"));
+  for (const g of c.facades) for (const { ligne, r } of g.lignes) l.push([g.facade, ligne.etage, ligne.plan, libelleProduit(ligne.produit), r.roll.largeur, fmt(r.run, 1), fmt(r.longueur, 2), r.nCollés, fmt(r.cordonM, 1)].join("\t"));
   l.push("");
-  for (const a of c.articles) l.push([`${PRODUITS[a.produit].nom} ${a.largeur} mm${a.mesure ? " (sur mesure)" : ""}`, `${a.rouleaux} rouleau(x) de ${ROULEAU_M} m`].join("\t"));
+  for (const a of c.articles) l.push([`${libelleProduit(a.produit)} ${a.largeur} mm${a.mesure ? " (sur mesure)" : ""}`, `${a.rouleaux} rouleau(x) de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`].join("\t"));
   l.push([`${COLLE.nom} ${COLLE.ml} ml`, `${c.cartouches} cartouche(s)`].join("\t"));
   return l.join("\n");
 }
@@ -235,7 +278,7 @@ $("mailBtn").addEventListener("click", () => {
   if (!lignes.length) return;
   const c = commande(lignes, reg);
   const corps = ["Bonjour,", "", "Commande de membranes d'étanchéité :", "",
-    ...c.articles.map((a) => `- ${a.rouleaux} × ${PRODUITS[a.produit].nom}, ${a.largeur} mm${a.mesure ? " (coupée sur mesure)" : ""}, rouleau de ${ROULEAU_M} m`),
+    ...c.articles.map((a) => `- ${a.rouleaux} × ${libelleProduit(a.produit)}, ${a.largeur} mm${a.mesure ? " (coupée sur mesure)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`),
     `- ${c.cartouches} × ${COLLE.nom}, ${COLLE.ml} ml`, "", "Merci d'avance."].join("\n");
   location.href = `mailto:?subject=${encodeURIComponent("Commande membranes d'étanchéité")}&body=${encodeURIComponent(corps)}`;
 });
@@ -285,7 +328,7 @@ async function exportPdf() {
     startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain", styles: style, headStyles: head,
     head: [["Article", "Quantité", "Détail"]],
     body: [
-      ...c.articles.map((a) => [`${PRODUITS[a.produit].nom}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${ROULEAU_M} m`, String(a.rouleaux), `${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m`]),
+      ...c.articles.map((a) => [`${libelleProduit(a.produit)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`, String(a.rouleaux), `${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m`]),
       [`${COLLE.nom}, ${COLLE.ml} ml`, String(c.cartouches), `${deuxPoints(c.cordonM)} m de cordon (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})`],
     ].map((row) => row.map(pdfText)),
     columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
@@ -305,7 +348,7 @@ async function exportPdf() {
   }
   if (y > 262) { doc.addPage(); y = 18; }
   doc.setFont("PlexSans", "normal").setFontSize(8).setTextColor(...GREY);
-  doc.splitTextToSize(pdfText(`Hypotheses : 1 cartouche de ${COLLE.ml} ml couvre ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m ; marge ${fmt(c.reglages.marge * 100, 0)} % ; recouvrement entre pieces ${fmt(c.reglages.recouvrement * 100, 0)} cm ; rouleaux de ${ROULEAU_M} m, pieces rangees dans les rouleaux (chutes comptees).`), 210 - 2 * M).forEach((t, i) => doc.text(t, M, y + i * 3.6));
+  doc.splitTextToSize(pdfText(`Hypotheses : 1 cartouche de ${COLLE.ml} ml couvre ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m ; marge ${fmt(c.reglages.marge * 100, 0)} % ; recouvrement entre pieces ${fmt(c.reglages.recouvrement * 100, 0)} cm ; rouleaux de 25 m (ou la longueur de la bibliotheque), pieces rangees dans les rouleaux (chutes comptees).`), 210 - 2 * M).forEach((t, i) => doc.text(t, M, y + i * 3.6));
   const n = doc.getNumberOfPages();
   for (let i = 1; i <= n; i++) {
     doc.setPage(i); doc.setFont("PlexSans", "normal").setFontSize(7.5).setTextColor(...GREY);
@@ -317,7 +360,75 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.2 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => toast("Membrane v1.3 · conçu et développé par Hugo N."));
+
+// ---------- Bibliotheque : voir les largeurs, ajouter / modifier / supprimer des produits ----------
+const mmListe = (l) => l.join(", ");
+const lireMm = (txt) => String(txt).split(/[\s,;]+/).filter(Boolean).map((x) => nombre(x));
+let biblioEdit = null; // id du produit en cours de modification ("" = nouveau)
+function afficherBiblio() {
+  const ids = Object.keys(PRODUITS);
+  $("biblioSub").textContent = `${ids.length} produit${ids.length > 1 ? "s" : ""}`;
+  $("biblioListe").innerHTML = ids.map((k) => {
+    const p = PRODUITS[k];
+    const chips = p.largeurs.map((w) => `<span class="chip${p.surDemande.includes(w) ? " dem" : ""}" title="${p.surDemande.includes(w) ? "Sur demande" : "En stock"}">${w}${p.surDemande.includes(w) ? "*" : ""}</span>`).join("");
+    return `<div class="prod"><div class="ph"><b>${esc(p.nom)}</b>${p.fournisseur ? `<span class="fo">${esc(p.fournisseur)}</span>` : ""}${p.role ? `<span class="ro">${esc(p.role)}</span>` : ""}</div>
+      <div class="chips">${chips}</div>
+      <div class="pm">Largeurs en mm${p.surDemande.length ? " (* sur demande)" : ""} · rouleaux de ${fmt(p.rouleauM, p.rouleauM % 1 ? 1 : 0)} m</div>
+      <div class="pa"><button type="button" class="mini" data-a="edit" data-k="${esc(k)}">Modifier</button><button type="button" class="mini" data-a="del" data-k="${esc(k)}">Supprimer</button></div></div>`;
+  }).join("");
+}
+function ouvrirForm(k) {
+  biblioEdit = k;
+  const p = k ? PRODUITS[k] : null;
+  $("biblioTitre").textContent = p ? `Modifier « ${p.nom} »` : "Nouveau produit";
+  $("bNom").value = p?.nom ?? ""; $("bFour").value = p?.fournisseur ?? ""; $("bRole").value = p?.role ?? "";
+  $("bLong").value = p ? String(p.rouleauM).replace(".", ",") : "25";
+  $("bLarg").value = p ? mmListe(p.largeurs.filter((w) => !p.surDemande.includes(w))) : ""; $("bDem").value = p ? mmListe(p.surDemande) : "";
+  $("biblioErr").textContent = ""; $("biblioForm").classList.remove("hidden");
+  $("bNom").focus();
+}
+const fermerForm = () => { biblioEdit = null; $("biblioForm").classList.add("hidden"); };
+$("voirBiblio").addEventListener("click", () => { $("biblio").open = true; $("biblio").scrollIntoView({ behavior: "smooth", block: "start" }); });
+$("biblioNouveau").addEventListener("click", () => ouvrirForm(""));
+$("biblioAnnuler").addEventListener("click", fermerForm);
+$("biblioForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const nom = $("bNom").value.trim(), long = nombre($("bLong").value || "25");
+  const std = lireMm($("bLarg").value), dem = lireMm($("bDem").value);
+  const err = !nom ? "Donne un nom au produit."
+    : [...std, ...dem].some((n) => !(n > 0)) ? "Les largeurs sont des nombres en mm, séparés par des virgules."
+    : !std.length && !dem.length ? "Indique au moins une largeur."
+    : !(long > 0) ? "La longueur d'un rouleau est un nombre en m."
+    : Object.entries(PRODUITS).some(([k, p]) => k !== biblioEdit && p.nom.toLowerCase() === nom.toLowerCase()) ? "Un produit porte déjà ce nom." : "";
+  if (err) { $("biblioErr").innerHTML = `<p>${esc(err)}</p>`; return; }
+  const id = biblioEdit || `p${Date.now().toString(36)}`;
+  const nouveau = { ...PRODUITS, [id]: { nom, court: nom, fournisseur: $("bFour").value, role: $("bRole").value, largeurs: [...std, ...dem], surDemande: dem, rouleauM: long } };
+  chargerCatalogue(nouveau); sauverCatalogue(); fermerForm(); afficherBiblio(); maj(); afficherCommande();
+  toast(biblioEdit ? "Produit modifié" : "Produit ajouté");
+});
+$("biblioListe").addEventListener("click", (e) => {
+  const x = e.target.closest("button[data-a]"); if (!x) return;
+  const k = x.dataset.k;
+  if (x.dataset.a === "edit") { ouvrirForm(k); return; }
+  if (Object.keys(PRODUITS).length <= 1) { toast("Il faut garder au moins un produit"); return; }
+  if (lignes.some((l) => l.produit === k)) { toast("Ce produit est utilisé dans la commande : retire d'abord ces lignes"); return; }
+  if (armeSuppr !== k) { armeSuppr = k; x.textContent = "Sûr ? Clique encore"; clearTimeout(armeT); armeT = setTimeout(() => { armeSuppr = null; afficherBiblio(); }, 4000); return; }
+  armeSuppr = null; const rest = { ...PRODUITS }; delete rest[k];
+  chargerCatalogue(rest); sauverCatalogue(); afficherBiblio(); maj(); afficherCommande(); toast("Produit supprimé");
+});
+let armeSuppr = null, armeT;
+let resetArme = false;
+$("biblioReset").addEventListener("click", () => {
+  if (!resetArme) { resetArme = true; $("biblioReset").textContent = "Sûr ? Les produits ajoutés seront perdus. Clique encore"; setTimeout(() => { resetArme = false; $("biblioReset").textContent = "Rétablir les produits d'origine (Sika)"; }, 4000); return; }
+  resetArme = false; $("biblioReset").textContent = "Rétablir les produits d'origine (Sika)";
+  const sauve = { ...PRODUITS };
+  chargerCatalogue(null);
+  if (lignes.some((l) => !PRODUITS[l.produit])) { chargerCatalogue(sauve); toast("Des lignes de la commande utilisent un produit ajouté : retire-les d'abord"); return; }
+  sauverCatalogue(); fermerForm(); afficherBiblio(); maj(); afficherCommande(); toast("Produits d'origine rétablis");
+});
 
 // ---------- Demarrage ----------
+$("produitSel").innerHTML = selHtml("produit", "Produit utilisé");
+afficherBiblio();
 lignesTroncons(); maj(); afficherCommande();

@@ -16,3 +16,5 @@ Aucune dépendance à installer pour l'appli : `index.html` + `js/` + `vendor/` 
 npm test                      # calculs (node --test)
 python3 -m http.server 8090   # puis node e2e/checkup.mjs captures (Playwright)
 ```
+
+- **Bibliothèque de produits** : les 3 produits Sika sont fournis ; on peut en ajouter d'autres (nom, fournisseur, rôle, largeurs en stock et sur demande, longueur du rouleau en m). Gardée dans le navigateur (`membrane.produits`) ; un produit utilisé dans la commande ne peut pas être supprimé.

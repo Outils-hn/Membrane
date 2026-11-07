@@ -8,6 +8,7 @@ const OUT = process.argv[2] ?? "captures";
 mkdirSync(OUT, { recursive: true });
 const lignes = [];
 const verif = (nom, ok, detail = "") => lignes.push(`${ok ? "OK    " : "ECHEC "} ${nom}${detail ? ` (${detail})` : ""}`);
+const choisir = async (page, box, k) => { await page.locator(`${box} .sel-btn`).click(); await page.locator(`${box} .sel-pop button[data-k="${k}"]`).click(); };
 const step = async (nom, fn) => { try { await fn(); } catch (e) { verif(nom, false, e.message.split("\n")[0].slice(0, 180)); } };
 const browser = await chromium.launch();
 
@@ -32,7 +33,10 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   verif("Un rouleau", (await txt(page, "#rRoul")) === "1");
   verif("Explication du calcul", /Bande dépliée : 220 mm.*2 cordons × 12,05 m = 24,1 m.*10 m par cartouche/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   verif("Dessin : 3 troncons cliquables, 2 cordons de colle", (await page.locator("#dessin .hit").count()) === 3 && (await page.locator("#dessin .glue").count()) === 2);
-  verif("Les produits sont proposes (3)", (await page.locator("#produit option").count()) === 3);
+  await page.locator("#produitSel .sel-btn").click();
+  verif("Les produits sont proposes (3), avec leur role", (await page.locator("#produitSel .sel-pop button").count()) === 3 && /pare-pluie/.test(await txt(page, "#produitSel .sel-pop")), await txt(page, "#produitSel .sel-pop"));
+  await page.keyboard.press("Escape");
+  verif("Echap ferme la liste", await page.locator("#produitSel .sel-pop").evaluate((el) => el.classList.contains("hidden")));
   verif("Pas de commande tant qu'on n'a rien ajoute", await page.locator("#cmd").evaluate((el) => el.classList.contains("hidden")));
   await page.screenshot({ path: `${OUT}/01-depart.png`, fullPage: true });
   await c.close();
@@ -51,7 +55,8 @@ await step("Dessin : toucher un troncon, ajouter, supprimer, direction", async (
   verif("Largeur depliee 250 : toujours un rouleau de 250", /250 mm/.test(await txt(page, "#rRoulL")), await txt(page, "#rRoulL"));
   await page.locator("#segs .row:nth-child(4) [data-f='del']").click();
   verif("Supprimer revient a 3 troncons", (await page.locator("#segs .row").count()) === 3);
-  await page.locator("#segs .row:nth-child(3) select").selectOption("NE");
+  await choisir(page, "#segs .row:nth-child(3) .sel", "NE");
+  verif("Direction choisie : affichee sur le bouton", /haut-droite/.test(await txt(page, "#segs .row:nth-child(3) .sel-btn")), await txt(page, "#segs .row:nth-child(3) .sel-btn"));
   verif("Changer la direction redessine sans erreur", (await page.locator("#dessin svg").count()) === 1);
   verif("Impossible de supprimer le dernier troncon", await (async () => { await page.locator("#segs .row:nth-child(3) [data-f='del']").click(); await page.locator("#segs .row:nth-child(2) [data-f='del']").click(); await page.locator("#segs .row:nth-child(1) [data-f='del']").click(); return (await page.locator("#segs .row").count()) === 1; })());
   await c.close();
@@ -67,11 +72,11 @@ await step("Largeurs : standard, sur mesure, produits, alertes", async () => {
   verif("Sur mesure : rouleau de 175 mm", /175 mm \(sur mesure\)/.test(await txt(page, "#rRoulL")), await txt(page, "#rRoulL"));
   verif("L'explication parle de coupe a 175 mm", /coupée à 175 mm/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   await page.click("#mesure [data-k='std']");
-  await page.selectOption("#produit", "uni");
+  await choisir(page, "#produitSel", "uni");
   verif("Universal : meme largeur de 200 mm", /200 mm/.test(await txt(page, "#rRoulL")));
   await page.locator("#segs .row:nth-child(1) input").fill("320");
   verif("Universal 320+25 = 345 mm : rouleau de 350 mm", /350 mm/.test(await txt(page, "#rRoulL")), await txt(page, "#rRoulL"));
-  await page.selectOption("#produit", "outplus");
+  await choisir(page, "#produitSel", "outplus");
   verif("Outdoor plus 345 mm : 1400 sur demande", /1400 mm \(sur demande\)/.test(await txt(page, "#rRoulL")), await txt(page, "#rRoulL"));
   await page.locator("#segs .row:nth-child(1) input").fill("1500");
   verif("Bande trop large : alerte", /dépasse le plus grand rouleau/.test(await txt(page, "#rAlertes")), await txt(page, "#rAlertes"));
@@ -99,6 +104,48 @@ await step("Reglages : colle 7,5 m, marge, recouvrement", async () => {
   verif("Sans marge ni recouvrement : 12,00 m, 24,0 m de cordon", /= 12,00 m.*24,0 m/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   await page.reload();
   verif("Les reglages sont gardes apres rechargement", (await page.inputValue("#recouvrement")) === "0");
+  await c.close();
+});
+
+await step("Bibliotheque : largeurs, ajouter un produit d'un autre fournisseur, modifier, supprimer", async () => {
+  const { c, page } = await ouvrir();
+  verif("Plus de phrase d'accroche dans le bandeau", (await page.locator(".tagline").count()) === 0);
+  await page.click("#voirBiblio");
+  verif("Le lien ouvre la bibliotheque", await page.locator("#biblio").evaluate((d) => d.open));
+  verif("3 produits Sika avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")) && /Largeurs en mm \(\* sur demande\) · rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  await page.click("#biblioNouveau");
+  await page.click("#biblioForm button[type=submit]");
+  verif("Nom obligatoire", /nom au produit/.test(await txt(page, "#biblioErr")), await txt(page, "#biblioErr"));
+  await page.fill("#bNom", "Isover Vario Xtra"); await page.fill("#bFour", "Saint-Gobain"); await page.fill("#bRole", "pare-vapeur"); await page.fill("#bLong", "50"); await page.fill("#bLarg", "100, 150, abc");
+  await page.click("#biblioForm button[type=submit]");
+  verif("Largeur illisible refusee", /nombres en mm/.test(await txt(page, "#biblioErr")), await txt(page, "#biblioErr"));
+  await page.fill("#bLarg", "1000, 1500"); await page.fill("#bDem", "2000");
+  await page.click("#biblioForm button[type=submit]");
+  verif("Produit ajoute a la bibliotheque", (await page.locator("#biblioListe .prod").count()) === 4 && /Isover Vario Xtra/.test(await txt(page, "#biblioListe")) && /rouleaux de 50 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  await page.locator("#produitSel .sel-btn").click();
+  verif("Il apparait dans la liste du produit utilise", (await page.locator("#produitSel .sel-pop button").count()) === 4);
+  await page.locator('#produitSel .sel-pop button:has-text("Isover")').click();
+  await page.locator("#segs .row:nth-child(1) input").fill("900"); await page.locator("#segs .row:nth-child(2) input").fill("0"); await page.locator("#segs .row:nth-child(3) input").fill("0");
+  await page.fill("#longueur", "30");
+  verif("Largeur 1000 en stock, un seul rouleau de 50 m", /1 rouleau de 1000 mm/.test(await txt(page, "#rRoul") + " " + await txt(page, "#rRoulL")), await txt(page, "#rRoul") + " " + await txt(page, "#rRoulL"));
+  await page.click("#ajouter");
+  verif("La commande indique le fournisseur et le rouleau de 50 m", /Isover Vario Xtra \(Saint-Gobain\), 1000 mm, rouleau de 50 m/.test(await txt(page, "#cmdTotal")), await txt(page, "#cmdTotal"));
+  await page.reload(); await page.waitForTimeout(200);
+  await page.click("#voirBiblio");
+  verif("La bibliotheque est gardee apres rechargement", (await page.locator("#biblioListe .prod").count()) === 4);
+  const supp = page.locator('#biblioListe .prod:has-text("Isover") button[data-a="del"]');
+  await supp.click();
+  verif("Produit utilise dans la commande : suppression refusee", (await page.locator("#biblioListe .prod").count()) === 4 && /utilisé dans la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
+  await page.locator("#cmdLignes button[data-a='del']").first().click();
+  await supp.click(); await supp.click();
+  verif("Supprime apres confirmation", (await page.locator("#biblioListe .prod").count()) === 3);
+  await page.locator('#biblioListe .prod:has-text("Universal") button[data-a="edit"]').click();
+  await page.fill("#bDem", ""); await page.click("#biblioForm button[type=submit]");
+  const uni = await txt(page, '#biblioListe .prod:has-text("Universal")');
+  verif("Modifier : sans largeur sur demande, Universal perd le 1400", /350/.test(uni) && !/1400/.test(uni), uni);
+  await page.click("#biblioReset"); await page.click("#biblioReset");
+  verif("Produits d'origine retablis", (await page.locator("#biblioListe .prod").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")));
+  await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true });
   await c.close();
 });
 
@@ -169,7 +216,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.2", /Membrane v1\.2/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.3", /Membrane v1\.3/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
   verif("Le menu liste Membrane et les autres applis", /Membrane Étanchéité ✓/.test(menu) && /Joint Dilatation et joints/.test(menu), menu.slice(0, 200));
