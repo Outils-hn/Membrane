@@ -9,8 +9,21 @@ export const PRODUITS = {
   out: { nom: "SikaMembran Outdoor", court: "Outdoor", role: "", largeurs: [100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000, 1200, 1400], surDemande: [] },
 };
 
-/** La colle : cartouche (portion tubulaire) de 600 ml = 7,5 m de cordon (fiche : 7,5 a 10 m, on prend le cas le plus defavorable) ; cartons de 20. */
-export const COLLE = { nom: "SikaBond-444 Membrane Fix", ml: 600, metresParCartouche: 7.5, parCarton: 20, cordonMm: 45 };
+/** La colle : cartouche (portion tubulaire) de 600 ml ; la fiche Sika donne 7,5 a 10 m de membrane par cartouche (10 m par defaut, 7,5 m = cas defavorable) ; cartons de 20. */
+export const COLLE = { nom: "SikaBond-444 Membrane Fix", ml: 600, metresParCartouche: 10, choixMetres: [10, 7.5], parCarton: 20, cordonMm: 45 };
+
+/** Reglages communs a la commande (textes saisis) : largeur du cordon (mm), metres de cordon par cartouche, marge (%), recouvrement (cm). */
+export const REGLAGES_DEFAUT = { cordon: String(COLLE.cordonMm), cartouche: String(COLLE.metresParCartouche), marge: "0", recouvrement: "5" };
+/** Lit les reglages : valeurs invalides = valeurs par defaut ; marge et recouvrement peuvent valoir 0. */
+export function reglages(r = {}) {
+  const ge0 = (v, d) => { const n = nombre(v); return Number.isFinite(n) && n >= 0 ? n : d; };
+  return {
+    cordon: pos(r.cordon) || COLLE.cordonMm,
+    cartouche: pos(r.cartouche) || COLLE.metresParCartouche,
+    marge: ge0(r.marge, 0) / 100,
+    recouvrement: ge0(r.recouvrement, 5) / 100, // en metres
+  };
+}
 
 /** Longueur d'un rouleau, en metres. */
 export const ROULEAU_M = 25;
@@ -69,11 +82,27 @@ export function positionCordon(i, n, len, cw) {
   return [(1 - c / len) / 2, (1 + c / len) / 2];
 }
 
-/** Resultat d'une bande : largeur de rouleau, longueur de cordon, alertes. Null si la longueur de bande manque. */
-export function calculBande(b) {
+/**
+ * Longueur de membrane pour une bande de longueur « run » (m) : marge, puis recouvrement avec la piece suivante.
+ * Une bande plus longue qu'un rouleau est coupee en pieces de 25 m au plus, chacune recouvrant la suivante.
+ * Rend la longueur totale et la liste des pieces (m).
+ */
+export function piecesBande(run, marge, recouvrement) {
+  const n = run * (1 + marge);
+  const k = Math.max(1, Math.ceil(n / (ROULEAU_M - recouvrement) - 1e-9));
+  const total = n + recouvrement * k;
+  const pieces = [];
+  for (let i = 0; i < k - 1; i++) pieces.push(ROULEAU_M);
+  pieces.push(total - ROULEAU_M * (k - 1));
+  return { net: n, total, pieces };
+}
+
+/** Resultat d'une bande : largeur de rouleau, longueurs, cordon, alertes. Null si la longueur de bande manque. */
+export function calculBande(b, reg = {}) {
+  const g = reglages(reg);
   const run = pos(b.longueur);
   const segs = b.segs ?? [];
-  const cw = pos(b.cordon) || COLLE.cordonMm;
+  const cw = g.cordon;
   const dev = developpe(segs);
   const alertes = [];
   if (!(run > 0)) return null;
@@ -82,9 +111,13 @@ export function calculBande(b) {
   if (roll?.depasse) alertes.push(`La bande (${fmt(dev, 0)} mm) dépasse le plus grand rouleau de ce produit (${roll.largeur} mm).`);
   if (!collés.length) alertes.push("Aucun tronçon n'est collé : pas de colle à prévoir.");
   for (const { s, i } of collés) if (pos(s.len) < cw) alertes.push(`Le tronçon ${i + 1} (${fmt(pos(s.len), 0)} mm) est plus court que le cordon de colle (${fmt(cw, 0)} mm).`);
+  const pc = piecesBande(run, g.marge, g.recouvrement);
   return {
     dev, roll, run, cw, nCollés: collés.length,
-    cordonM: collés.length * run,
+    longueur: pc.total, pieces: pc.pieces,
+    cordonM: collés.length * pc.total,
+    cartouches: Math.ceil((collés.length * pc.total) / g.cartouche - 1e-9),
+    rouleaux: Math.ceil(pc.total / ROULEAU_M - 1e-9),
     alertes,
   };
 }
@@ -102,33 +135,46 @@ export function rangEtage(e) {
 }
 export const triNaturel = (a, b) => String(a).localeCompare(String(b), "fr", { numeric: true, sensitivity: "base" });
 
+/** Range des pieces (m) dans des rouleaux de 25 m, les plus longues d'abord : rend les rouleaux (liste de pieces). */
+export function rangerRouleaux(pieces) {
+  const rouleaux = [];
+  for (const p of pieces.slice().sort((a, b) => b - a)) {
+    const r = rouleaux.find((x) => x.reste >= p - 1e-9);
+    if (r) { r.reste -= p; r.pieces.push(p); } else rouleaux.push({ reste: ROULEAU_M - p, pieces: [p] });
+  }
+  return rouleaux;
+}
+
 /**
  * La commande : total par article (rouleaux par produit et largeur, colle) et lignes classees par facade puis par etage.
- * Rouleaux : calcul brut (somme des longueurs / 25 m, arrondi au rouleau superieur), sans chute ni recouvrement.
+ * Rouleaux : chaque bande = marge + recouvrement de 5 cm (coupee en pieces de 25 m au plus), pieces rangees dans les
+ * rouleaux de 25 m ; les chutes sont ce qui reste dans les rouleaux entames.
  */
-export function commande(lignes) {
-  const rouleaux = new Map();
+export function commande(lignes, reg = {}) {
+  const g = reglages(reg);
+  const groupesRoul = new Map();
   let cordonM = 0;
   const calculees = [];
   for (const l of lignes) {
-    const r = calculBande(l);
+    const r = calculBande(l, reg);
     if (!r || !r.roll) continue;
     calculees.push({ ligne: l, r });
     cordonM += r.cordonM;
     const cle = `${l.produit}|${r.roll.largeur}|${r.roll.mesure ? 1 : 0}`;
-    const e = rouleaux.get(cle) ?? { produit: l.produit, largeur: r.roll.largeur, mesure: r.roll.mesure, surDemande: r.roll.surDemande, metres: 0 };
-    e.metres += r.run;
-    rouleaux.set(cle, e);
+    const e = groupesRoul.get(cle) ?? { produit: l.produit, largeur: r.roll.largeur, mesure: r.roll.mesure, surDemande: r.roll.surDemande, metres: 0, net: 0, pieces: [] };
+    e.metres += r.longueur; e.net += r.run; e.pieces.push(...r.pieces);
+    groupesRoul.set(cle, e);
   }
   const ordre = Object.keys(PRODUITS);
-  const articles = [...rouleaux.values()]
-    .map((e) => ({ ...e, rouleaux: Math.ceil(e.metres / ROULEAU_M - 1e-9) }))
-    .sort((a, b) => ordre.indexOf(a.produit) - ordre.indexOf(b.produit) || a.largeur - b.largeur);
-  const cartouches = Math.ceil(cordonM / COLLE.metresParCartouche - 1e-9);
+  const articles = [...groupesRoul.values()].map((e) => {
+    const rouleaux = rangerRouleaux(e.pieces);
+    return { ...e, rouleaux: rouleaux.length, chutes: rouleaux.length * ROULEAU_M - e.metres, recouvrement: e.metres - e.net };
+  }).sort((a, b) => ordre.indexOf(a.produit) - ordre.indexOf(b.produit) || a.largeur - b.largeur);
+  const cartouches = Math.ceil(cordonM / g.cartouche - 1e-9);
   // Facades triees (sans facade a la fin), etages par rang puis ordre naturel
   const groupes = new Map();
   for (const c of calculees) { const f = c.ligne.facade?.trim() ?? ""; if (!groupes.has(f)) groupes.set(f, []); groupes.get(f).push(c); }
   const facades = [...groupes.keys()].sort((a, b) => (a === "") - (b === "") || triNaturel(a, b))
     .map((f) => ({ facade: f, lignes: groupes.get(f).slice().sort((a, b) => rangEtage(a.ligne.etage) - rangEtage(b.ligne.etage) || triNaturel(a.ligne.etage ?? "", b.ligne.etage ?? "")) }));
-  return { articles, cordonM, cartouches, cartons: Math.ceil(cartouches / COLLE.parCarton - 1e-9), facades };
+  return { articles, cordonM, cartouches, cartons: Math.ceil(cartouches / COLLE.parCarton - 1e-9), facades, reglages: g };
 }

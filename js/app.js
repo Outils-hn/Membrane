@@ -1,5 +1,5 @@
 // Membrane : affichage et saisie. Les calculs sont dans core.js.
-import { PRODUITS, COLLE, ROULEAU_M, DIRS, dir, nombre, fmt, calculBande, commande, positionCordon } from "./core.js";
+import { PRODUITS, COLLE, ROULEAU_M, DIRS, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
 const CLE = "membrane.v1";
@@ -12,28 +12,30 @@ const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 
 // ---------- Etat : la bande en cours + la commande (gardes dans le navigateur) ----------
 const NEUF = () => ({
-  facade: "", etage: "", plan: "", produit: "outplus", mesure: false, longueur: "12", cordon: String(COLLE.cordonMm),
+  facade: "", etage: "", plan: "", produit: "outplus", mesure: false, longueur: "12",
   segs: [{ len: "100", dir: "E", on: true }, { len: "40", dir: "SE", on: false }, { len: "80", dir: "E", on: true }],
 });
 let b = NEUF();       // bande en cours de dessin
 let lignes = [];      // la commande
 let edition = null;   // id de la ligne en cours de modification
+let reg = { ...REGLAGES_DEFAUT }; // reglages de la commande (colle, marge, recouvrement)
 try {
   const lu = JSON.parse(localStorage.getItem(CLE) ?? "null");
   if (lu?.bande) b = nettoyer(lu.bande);
   if (Array.isArray(lu?.lignes)) lignes = lu.lignes.map(nettoyer).filter(Boolean);
+  if (lu?.reg && typeof lu.reg === "object") for (const k of Object.keys(reg)) if (typeof lu.reg[k] === "string") reg[k] = lu.reg[k];
 } catch (e) { /* stockage bloque : on part de zero */ }
 function nettoyer(x) {
   if (!x || typeof x !== "object") return NEUF();
   const n = NEUF();
-  for (const k of ["facade", "etage", "plan", "longueur", "cordon"]) if (typeof x[k] === "string") n[k] = x[k];
+  for (const k of ["facade", "etage", "plan", "longueur"]) if (typeof x[k] === "string") n[k] = x[k];
   if (PRODUITS[x.produit]) n.produit = x.produit;
   n.mesure = x.mesure === true;
   if (Array.isArray(x.segs) && x.segs.length) n.segs = x.segs.slice(0, 12).map((s) => ({ len: String(s?.len ?? ""), dir: DIRS.some((d) => d.id === s?.dir) ? s.dir : "E", on: s?.on === true }));
   if (typeof x.id === "string") n.id = x.id;
   return n;
 }
-const sauver = () => { try { localStorage.setItem(CLE, JSON.stringify({ bande: b, lignes })); } catch (e) { /* ignore */ } };
+const sauver = () => { try { localStorage.setItem(CLE, JSON.stringify({ bande: b, lignes, reg })); } catch (e) { /* ignore */ } };
 
 // ---------- Menu des applis ----------
 $("appsList").innerHTML = `<div class="apps-label">Mes outils</div>
@@ -67,7 +69,10 @@ function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add
 // ---------- Champs simples ----------
 $("produit").innerHTML = Object.entries(PRODUITS).map(([k, p]) => `<option value="${k}">${p.nom}${p.role ? ` (${p.role})` : ""}</option>`).join("");
 $("produit").addEventListener("change", () => { b.produit = $("produit").value; maj(); });
-for (const k of ["facade", "etage", "plan", "longueur", "cordon"]) $(k).addEventListener("input", () => { b[k] = $(k).value; maj(); });
+for (const k of ["facade", "etage", "plan", "longueur"]) $(k).addEventListener("input", () => { b[k] = $(k).value; maj(); });
+for (const k of Object.keys(REGLAGES_DEFAUT)) $(k).addEventListener("input", () => { reg[k] = $(k).value; maj(); afficherCommande(); });
+$("cartSeg").innerHTML = COLLE.choixMetres.map((m) => `<button type="button" data-m="${m}">${fmt(m, m % 1 ? 1 : 0)} m<br><small>${m === 10 ? "courant" : "défavorable"}</small></button>`).join("");
+$("cartSeg").addEventListener("click", (e) => { const x = e.target.closest("button[data-m]"); if (x) { reg.cartouche = x.dataset.m.replace(".", ","); maj(); afficherCommande(); } });
 $("mesure").innerHTML = `<button type="button" role="radio" data-k="std">Standard</button><button type="button" role="radio" data-k="mes">Coupée sur mesure</button>`;
 $("mesure").addEventListener("click", (e) => { const x = e.target.closest("button[data-k]"); if (x) { b.mesure = x.dataset.k === "mes"; maj(); } });
 
@@ -115,7 +120,7 @@ function dessiner() {
   const k = Math.min(440 / w, 150 / h, 3.5);
   const ox = 300 - ((Math.min(...xs) + Math.max(...xs)) / 2) * k, oy = 115 - ((Math.min(...ys) + Math.max(...ys)) / 2) * k;
   const P = (p) => [ox + p[0] * k, oy + p[1] * k];
-  const cw = Math.max(nombre(b.cordon) || COLLE.cordonMm, 1);
+  const cw = Math.max(reglages(reg).cordon, 1);
   const f = (v) => v.toFixed(1);
   let glue = "", mem = "", hit = "", txt = "";
   b.segs.forEach((s, i) => {
@@ -141,11 +146,15 @@ $("dessin").addEventListener("click", (e) => {
 // ---------- Resultat de la bande ----------
 const pluriel = (n, un, plus) => (n > 1 ? plus : un);
 function maj() {
-  for (const k of ["facade", "etage", "plan", "longueur", "cordon"]) if ($(k).value !== b[k]) $(k).value = b[k];
+  for (const k of ["facade", "etage", "plan", "longueur"]) if ($(k).value !== b[k]) $(k).value = b[k];
+  for (const k of Object.keys(REGLAGES_DEFAUT)) if ($(k).value !== reg[k]) $(k).value = reg[k];
+  const cartNum = reglages(reg).cartouche;
+  $("cartSeg").querySelectorAll("button").forEach((x) => { const on = Math.abs(Number(x.dataset.m) - cartNum) < 1e-9; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
   $("produit").value = b.produit;
   $("mesure").querySelectorAll("button").forEach((x) => { const on = (x.dataset.k === "mes") === b.mesure; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
   dessiner();
-  const r = calculBande(b);
+  const r = calculBande(b, reg);
+  const g = reglages(reg);
   const p = PRODUITS[b.produit];
   if (!r || !r.roll) {
     $("rCart").textContent = "—"; $("rRoul").textContent = "—";
@@ -154,13 +163,12 @@ function maj() {
     $("rAlertes").innerHTML = ""; $("ajouter").disabled = true;
     sauver(); return;
   }
-  const cart = Math.ceil(r.cordonM / COLLE.metresParCartouche - 1e-9);
-  const roul = Math.ceil(r.run / ROULEAU_M - 1e-9);
+  const cart = r.cartouches, roul = r.rouleaux;
   $("rCart").textContent = String(cart); $("rCartL").textContent = pluriel(cart, "cartouche de colle", "cartouches de colle");
   $("rRoul").textContent = String(roul); $("rRoulL").textContent = `${pluriel(roul, "rouleau", "rouleaux")} de ${r.roll.largeur} mm${r.roll.mesure ? " (sur mesure)" : r.roll.surDemande ? " (sur demande)" : ""}`;
   $("rWhy").textContent = `Bande dépliée : ${fmt(r.dev, 0)} mm, donc ${r.roll.mesure ? "coupée à " : "rouleau de "}${r.roll.largeur} mm en ${p.court}. `
-    + `Colle : ${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} × ${fmt(r.run, 1)} m = ${fmt(r.cordonM, 1)} m, à ${fmt(COLLE.metresParCartouche, 1)} m par cartouche de ${COLLE.ml} ml. `
-    + `Rouleaux de ${ROULEAU_M} m, sans chute ni recouvrement.`;
+    + `Longueur : ${fmt(r.run, 2)} m${g.marge ? ` + marge ${fmt(g.marge * 100, 0)} %` : ""}${g.recouvrement ? ` + recouvrement ${fmt(g.recouvrement * 100, 0)} cm` : ""} = ${fmt(r.longueur, 2)} m. `
+    + `Colle : ${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} × ${fmt(r.longueur, 2)} m = ${fmt(r.cordonM, 1)} m, à ${fmt(g.cartouche, g.cartouche % 1 ? 1 : 0)} m par cartouche de ${COLLE.ml} ml.`;
   $("rAlertes").innerHTML = r.alertes.map((a) => `<p>${esc(a)}</p>`).join("");
   $("ajouter").disabled = false;
   $("ajouter").textContent = edition ? "Mettre à jour la ligne" : "Ajouter à la commande";
@@ -174,13 +182,13 @@ const deuxPoints = (n) => fmt(n, 1);
 function afficherCommande() {
   $("cmd").classList.toggle("hidden", !lignes.length);
   if (!lignes.length) return;
-  const c = commande(lignes);
+  const c = commande(lignes, reg);
   $("cmdLignes").innerHTML = c.facades.map((g) => `<div class="fh">${g.facade ? "Façade " + esc(g.facade) : "Sans façade"}</div>
     <div class="tscroll"><table class="tbl"><thead><tr><th>Étage</th><th>Plan</th><th>Membrane</th><th class="num">Longueur</th><th class="num">Colle</th><th></th></tr></thead><tbody>${
-      g.lignes.map(({ ligne: l, r }) => `<tr${edition === l.id ? ' class="edit"' : ""}><td>${esc(l.etage) || "—"}</td><td>${esc(l.plan) || "—"}</td><td>${esc(nomProduit(l, r))}</td><td class="num">${deuxPoints(r.run)} m</td><td class="num">${r.nCollés} × ${deuxPoints(r.run)} m</td><td class="act"><button type="button" data-a="edit" data-id="${l.id}">Modifier</button><button type="button" data-a="del" data-id="${l.id}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`).join("");
+      g.lignes.map(({ ligne: l, r }) => `<tr${edition === l.id ? ' class="edit"' : ""}><td>${esc(l.etage) || "—"}</td><td>${esc(l.plan) || "—"}</td><td>${esc(nomProduit(l, r))}</td><td class="num">${deuxPoints(r.run)} m</td><td class="num">${r.nCollés} × ${fmt(r.longueur, 2)} m</td><td class="act"><button type="button" data-a="edit" data-id="${l.id}">Modifier</button><button type="button" data-a="del" data-id="${l.id}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`).join("");
   $("cmdTotal").innerHTML = `<div class="tscroll"><table class="tbl"><thead><tr><th>Article</th><th class="num">Quantité</th><th>Détail</th></tr></thead><tbody>${
-    c.articles.map((a) => `<tr><td>${esc(PRODUITS[a.produit].nom)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${ROULEAU_M} m</td><td class="num"><b>${a.rouleaux}</b></td><td>${deuxPoints(a.metres)} m de bande</td></tr>`).join("")
-  }<tr><td>${esc(COLLE.nom)}, ${COLLE.ml} ml</td><td class="num"><b>${c.cartouches}</b></td><td>${deuxPoints(c.cordonM)} m de cordon (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})</td></tr></tbody></table></div>`;
+    c.articles.map((a) => `<tr><td>${esc(PRODUITS[a.produit].nom)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${ROULEAU_M} m</td><td class="num"><b>${a.rouleaux}</b></td><td>${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m</td></tr>`).join("")
+  }<tr><td>${esc(COLLE.nom)}, ${COLLE.ml} ml</td><td class="num"><b>${c.cartouches}</b></td><td>${deuxPoints(c.cordonM)} m de cordon, à ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m par cartouche (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})</td></tr></tbody></table></div>`;
 }
 $("ajouter").addEventListener("click", () => {
   const r = calculBande(b); if (!r || !r.roll) return;
@@ -209,9 +217,9 @@ $("viderBtn").addEventListener("click", () => {
 
 // ---------- Exports : Excel, mail, PDF ----------
 function tableauTexte() {
-  const c = commande(lignes);
-  const l = [["Façade", "Étage", "Plan", "Produit", "Largeur (mm)", "Longueur (m)", "Tronçons collés", "Cordon (m)"].join("\t")];
-  for (const g of c.facades) for (const { ligne, r } of g.lignes) l.push([g.facade, ligne.etage, ligne.plan, PRODUITS[ligne.produit].nom, r.roll.largeur, fmt(r.run, 1), r.nCollés, fmt(r.cordonM, 1)].join("\t"));
+  const c = commande(lignes, reg);
+  const l = [["Façade", "Étage", "Plan", "Produit", "Largeur (mm)", "Longueur (m)", "Avec marge et recouvrement (m)", "Tronçons collés", "Cordon (m)"].join("\t")];
+  for (const g of c.facades) for (const { ligne, r } of g.lignes) l.push([g.facade, ligne.etage, ligne.plan, PRODUITS[ligne.produit].nom, r.roll.largeur, fmt(r.run, 1), fmt(r.longueur, 2), r.nCollés, fmt(r.cordonM, 1)].join("\t"));
   l.push("");
   for (const a of c.articles) l.push([`${PRODUITS[a.produit].nom} ${a.largeur} mm${a.mesure ? " (sur mesure)" : ""}`, `${a.rouleaux} rouleau(x) de ${ROULEAU_M} m`].join("\t"));
   l.push([`${COLLE.nom} ${COLLE.ml} ml`, `${c.cartouches} cartouche(s)`].join("\t"));
@@ -225,7 +233,7 @@ $("xlsBtn").addEventListener("click", async () => {
 });
 $("mailBtn").addEventListener("click", () => {
   if (!lignes.length) return;
-  const c = commande(lignes);
+  const c = commande(lignes, reg);
   const corps = ["Bonjour,", "", "Commande de membranes d'étanchéité :", "",
     ...c.articles.map((a) => `- ${a.rouleaux} × ${PRODUITS[a.produit].nom}, ${a.largeur} mm${a.mesure ? " (coupée sur mesure)" : ""}, rouleau de ${ROULEAU_M} m`),
     `- ${c.cartouches} × ${COLLE.nom}, ${COLLE.ml} ml`, "", "Merci d'avance."].join("\n");
@@ -262,7 +270,7 @@ async function exportPdf() {
   for (const st of ["normal", "bold"]) { doc.addFileToVFS(pdfFonts[st].file, pdfFonts[st].data); doc.addFont(pdfFonts[st].file, "PlexSans", st); }
   doc.setFont("PlexSans", "normal");
   const M = 14, INK = [31, 32, 38], GREY = [112, 115, 124], LINE = [222, 222, 218], ACC = [180, 83, 9];
-  const c = commande(lignes);
+  const c = commande(lignes, reg);
   doc.setFillColor(...ACC).rect(M, 11.2, 4.5, 4.2, "F");
   doc.setDrawColor(...INK).setLineWidth(0.6).line(M + 4.5, 15.4, M + 9, 15.4).line(M + 9, 15.4, M + 12, 11.2);
   doc.setFont("PlexSans", "bold").setFontSize(13).setTextColor(...INK).text("Membrane", M + 15, 15);
@@ -277,7 +285,7 @@ async function exportPdf() {
     startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain", styles: style, headStyles: head,
     head: [["Article", "Quantité", "Détail"]],
     body: [
-      ...c.articles.map((a) => [`${PRODUITS[a.produit].nom}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${ROULEAU_M} m`, String(a.rouleaux), `${deuxPoints(a.metres)} m de bande`]),
+      ...c.articles.map((a) => [`${PRODUITS[a.produit].nom}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${ROULEAU_M} m`, String(a.rouleaux), `${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m`]),
       [`${COLLE.nom}, ${COLLE.ml} ml`, String(c.cartouches), `${deuxPoints(c.cordonM)} m de cordon (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})`],
     ].map((row) => row.map(pdfText)),
     columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
@@ -290,14 +298,14 @@ async function exportPdf() {
     doc.autoTable({
       startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain", styles: style, headStyles: head,
       head: [["Étage", "Plan", "Membrane", "Longueur", "Colle"]],
-      body: g.lignes.map(({ ligne: l, r }) => [l.etage || "-", l.plan || "-", nomProduit(l, r), `${deuxPoints(r.run)} m`, `${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} x ${deuxPoints(r.run)} m`].map(pdfText)),
+      body: g.lignes.map(({ ligne: l, r }) => [l.etage || "-", l.plan || "-", nomProduit(l, r), `${deuxPoints(r.run)} m`, `${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} x ${fmt(r.longueur, 2)} m`].map(pdfText)),
       columnStyles: { 3: { halign: "right" }, 4: { halign: "right" } },
     });
     y = doc.lastAutoTable.finalY + 6;
   }
   if (y > 262) { doc.addPage(); y = 18; }
   doc.setFont("PlexSans", "normal").setFontSize(8).setTextColor(...GREY);
-  doc.splitTextToSize(pdfText(`Calcul brut : 1 cartouche de ${COLLE.ml} ml = ${fmt(COLLE.metresParCartouche, 1)} m de cordon ; rouleaux de ${ROULEAU_M} m, sans chute ni recouvrement.`), 210 - 2 * M).forEach((t, i) => doc.text(t, M, y + i * 3.6));
+  doc.splitTextToSize(pdfText(`Hypotheses : 1 cartouche de ${COLLE.ml} ml couvre ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m ; marge ${fmt(c.reglages.marge * 100, 0)} % ; recouvrement entre pieces ${fmt(c.reglages.recouvrement * 100, 0)} cm ; rouleaux de ${ROULEAU_M} m, pieces rangees dans les rouleaux (chutes comptees).`), 210 - 2 * M).forEach((t, i) => doc.text(t, M, y + i * 3.6));
   const n = doc.getNumberOfPages();
   for (let i = 1; i <= n; i++) {
     doc.setPage(i); doc.setFont("PlexSans", "normal").setFontSize(7.5).setTextColor(...GREY);
@@ -309,7 +317,7 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.0 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => toast("Membrane v1.1 · conçu et développé par Hugo N."));
 
 // ---------- Demarrage ----------
 lignesTroncons(); maj(); afficherCommande();

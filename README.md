@@ -4,8 +4,8 @@ Membranes d'étanchéité (SikaMembran Outdoor plus, Outdoor, Universal) : on de
 
 - **Dessin** : tronçons avec largeur (mm) et direction (8 directions), cliquables pour coller ou non. Le cordon de colle (45 mm par défaut) est au **bout libre** du tronçon : début du premier tronçon, fin du dernier, centré pour un tronçon du milieu.
 - **Largeur du rouleau** : standard (la plus petite largeur du produit qui couvre la bande) ou coupée sur mesure par le fournisseur (largeur exacte de la bande).
-- **Colle** : 1 cartouche de 600 ml = 7,5 m de cordon (fiche Sika : 7,5 à 10 m, cas le plus défavorable) ; cartons de 20.
-- **Rouleaux** : 25 m, longueurs additionnées par produit et par largeur, arrondies au rouleau supérieur, sans chute ni recouvrement.
+- **Colle** : 1 cartouche de 600 ml couvre 10 m de cordon par défaut (fiche Sika : 7,5 à 10 m ; 7,5 m = cas défavorable, au choix dans les réglages et rappelé sur le bon de commande) ; cartons de 20.
+- **Rouleaux** : 25 m. Chaque bande = longueur + marge (%, réglable, 0 par défaut) + recouvrement de 5 cm (réglable) ; une bande de plus de 25 m est coupée en pièces. Les pièces sont rangées dans les rouleaux (par produit et largeur) ; les chutes sont indiquées.
 - **Commande** : gardée dans le navigateur (pas de compte, pas de base), PDF sans nom de personne, copie pour Excel, préparation du mail.
 
 Aucune dépendance à installer pour l'appli : `index.html` + `js/` + `vendor/` (jsPDF et police IBM Plex Sans, livrés avec l'appli).
