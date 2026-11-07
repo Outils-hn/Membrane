@@ -1,0 +1,10 @@
+{
+  "name": "membrane",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Membranes d'etancheite : colle et rouleaux a commander",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

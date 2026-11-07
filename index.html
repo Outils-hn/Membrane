@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Membrane</title>
+<script>
+  // Theme choisi (reglage commun aux applis), applique avant l'affichage
+  try { const t = localStorage.getItem("outils-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+<meta name="description" content="Membranes d'étanchéité : la colle et les rouleaux à commander">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18h10l6-12' fill='none' stroke='%231f2026' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M3 18h6' stroke='%23B45309' stroke-width='6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css?v=1.0">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <!-- Logo : une bande de membrane pliee, avec son cordon de colle -->
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M2 17h9l8-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2.5 17h5" stroke="var(--accent)" stroke-width="5" stroke-linecap="butt"/>
+      </svg>
+      <details class="apps" id="appsMenu">
+        <summary aria-label="Changer d'application"><h1 class="app-name">Membrane</h1>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="apps-menu" id="appsList"></div>
+      </details>
+    </div>
+    <span class="tagline">Étanchéité : la colle et les rouleaux à commander</span>
+    <button class="pill" id="themeBtn" title="Changer de thème"></button>
+  </div>
+</header>
+
+<main>
+  <section class="card" aria-labelledby="hBande">
+    <h2 id="hBande">Ma bande</h2>
+    <div class="trio">
+      <label class="f"><span class="lbl">Façade</span><input id="facade" autocomplete="off" placeholder="ex. Nord"></label>
+      <label class="f"><span class="lbl">Étage</span><input id="etage" autocomplete="off" placeholder="ex. R+1"></label>
+      <label class="f"><span class="lbl">N° du plan de coupe</span><input id="plan" autocomplete="off" placeholder="ex. 101"></label>
+    </div>
+    <label class="f"><span class="lbl">Produit utilisé</span><select id="produit"></select></label>
+
+    <div class="draw" id="dessin" role="img" aria-label="Dessin de la bande de membrane en coupe"></div>
+    <p class="legend"><span><i class="k-mem"></i> membrane</span><span><i class="k-glue"></i> cordon de colle, au bout libre</span><span>Touche un tronçon pour le coller ou non</span></p>
+
+    <span class="lbl slbl">Tronçons de la bande</span>
+    <div class="rows" id="segs"></div>
+    <button type="button" class="add" id="addSeg">+ Ajouter un tronçon</button>
+
+    <div class="duo">
+      <label class="f"><span class="lbl">Longueur de la bande</span><span class="withu"><input id="longueur" inputmode="decimal" autocomplete="off"><em>m</em></span></label>
+      <div class="f"><span class="lbl" id="lMesure">Largeur du rouleau</span><div class="seg deux" id="mesure" role="radiogroup" aria-labelledby="lMesure"></div></div>
+    </div>
+    <details class="reglages"><summary>Réglage de la colle</summary>
+      <label class="f"><span class="lbl">Largeur du cordon de colle</span><span class="withu"><input id="cordon" inputmode="decimal" autocomplete="off"><em>mm</em></span></label>
+      <p class="hint">Fiche Sika : cordon de 4 à 5 cm côté structure, 2 à 3 cm côté châssis, 1 mm d'épaisseur.</p>
+    </details>
+  </section>
+
+  <section class="card result" aria-labelledby="hRes">
+    <h2 id="hRes">À prévoir pour cette bande</h2>
+    <div class="bigs">
+      <div><div class="big" id="rCart">—</div><div class="bl" id="rCartL">cartouches de colle</div></div>
+      <div><div class="big" id="rRoul">—</div><div class="bl" id="rRoulL">rouleau</div></div>
+    </div>
+    <p class="why" id="rWhy"></p>
+    <div class="alertes" id="rAlertes" role="status"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="ajouter">Ajouter à la commande</button>
+      <button type="button" class="btn ghost hidden" id="annuler">Annuler la modification</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="cmd" aria-labelledby="hCmd">
+    <h2 id="hCmd">La commande</h2>
+    <div id="cmdLignes"></div>
+    <h3 class="sub">À commander</h3>
+    <div id="cmdTotal"></div>
+    <div class="actions wrap">
+      <button type="button" class="btn" id="pdfBtn">Télécharger le bon de commande (PDF)</button>
+      <button type="button" class="btn ghost" id="xlsBtn">Copier pour Excel</button>
+      <button type="button" class="btn ghost" id="mailBtn">Préparer le mail</button>
+    </div>
+    <p class="hint"><button type="button" class="linkbtn" id="viderBtn">Vider la commande</button></p>
+  </section>
+</main>
+<footer>Membrane v1.0 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.0&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<div class="toast" id="toast" role="status"></div>
+<script type="module" src="js/app.js?v=1.0"></script>
+</body>
+</html>
