@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.2 — 7 novembre 2026
+
+- Correction : dans le menu des applis, le nom « Membrane » ne touche plus sa description.
+
 ## 1.1 — 7 novembre 2026
 
 - Nouveauté : Membrane compte maintenant les recouvrements de 5 cm entre pièces et les chutes de rouleau, et permet d'ajouter une marge en pourcentage. La colle est calculée à 10 m par cartouche (cas courant), avec un bouton pour passer au cas défavorable de 7,5 m ; le choix est indiqué sur le bon de commande.
