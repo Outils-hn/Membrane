@@ -1,5 +1,5 @@
 // Membrane : affichage et saisie. Les calculs sont dans core.js.
-import { PRODUITS, COLLE, DIRS, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit } from "./core.js";
+import { PRODUITS, COLLE, DIRS, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
 const CLE = "membrane.v1";
@@ -194,6 +194,7 @@ function maj() {
   $("cartSeg").querySelectorAll("button").forEach((x) => { const on = Math.abs(Number(x.dataset.m) - cartNum) < 1e-9; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
   if (!PRODUITS[b.produit]) b.produit = premierProduit();
   majSelects();
+  { const f = PRODUITS[b.produit]?.indexFiche; $("produitFiche").innerHTML = f ? ficheLien(f) : ""; }
   $("mesure").querySelectorAll("button").forEach((x) => { const on = (x.dataset.k === "mes") === b.mesure; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
   dessiner();
   const r = calculBande(b, reg);
@@ -360,24 +361,198 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.4 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => toast("Membrane v1.5 · conçu et développé par Hugo N."));
 
-// ---------- Bibliotheque : voir les largeurs, ajouter / modifier / supprimer des produits ----------
+// ---------- Catalogue commun a l'equipe (base d'Index) : compte, lecture, envoi, retrait ----------
+// Lecture libre ; envoi et retrait : compte Index valide (meme connexion que les autres applis, meme site).
+// Sans reseau, Membrane continue avec la copie de ce poste. La fusion est dans core.js (testee).
+const SB_URL = "https://ngfzwfbraqkdcocdcmib.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU";
+const SESSION_KEY = "sb-ngfzwfbraqkdcocdcmib-auth-token";
+const INDEX_URL = "https://outils-hn.github.io/Index";
+const CLE_BASE = "membrane.base";
+const partage = { etat: "sync", at: null };
+let base = {};
+try { base = JSON.parse(localStorage.getItem(CLE_BASE)) ?? {}; } catch (e) { base = {}; }
+const sauverBase = () => { try { localStorage.setItem(CLE_BASE, JSON.stringify(base)); } catch (e) { /* ignore */ } };
+let distant = {}; // derniere version recue de l'equipe, par id (pour « annuler mes modifications »)
+
+const lireSession = () => { try { const s = JSON.parse(localStorage.getItem(SESSION_KEY)); return s && s.access_token ? s : null; } catch (e) { return null; } };
+const ecrireSession = (s) => { try { if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s)); else localStorage.removeItem(SESSION_KEY); } catch (e) { /* ignore */ } };
+const avecExpiration = (r) => ({ ...r, expires_at: r.expires_at || Math.floor(Date.now() / 1000) + (r.expires_in || 3600) });
+async function jeton() {
+  const s = lireSession(); if (!s) return null;
+  if ((s.expires_at || 0) > Date.now() / 1000 + 30) return s.access_token;
+  try {
+    const r = await fetch(SB_URL + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: s.refresh_token }) });
+    if (!r.ok) return s.access_token;
+    const n = avecExpiration(await r.json()); ecrireSession(n); return n.access_token;
+  } catch (e) { return s.access_token; }
+}
+async function seConnecter(email, mdp) {
+  try {
+    const r = await fetch(SB_URL + "/auth/v1/token?grant_type=password", { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), password: mdp }) });
+    const j = await r.json();
+    if (!r.ok) {
+      const m = String(j.error_description || j.msg || "");
+      return /invalid login/i.test(m) ? "Email ou mot de passe incorrect." : /confirm/i.test(m) ? "Adresse email pas encore confirmée : ouvre le lien reçu par email." : (m || "Connexion impossible.");
+    }
+    ecrireSession(avecExpiration(j)); return null;
+  } catch (e) { return "Pas de connexion au serveur."; }
+}
+async function sb(chemin, init = {}) {
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const tok = await jeton();
+    return await fetch(SB_URL + chemin, { ...init, headers: { apikey: SB_KEY, "Content-Type": "application/json", Authorization: "Bearer " + (tok || SB_KEY) }, signal: ctrl.signal });
+  } finally { clearTimeout(t); }
+}
+async function rpc(fn, args) {
+  try {
+    const r = await sb("/rest/v1/rpc/" + fn, { method: "POST", body: JSON.stringify(args) });
+    if (!r.ok) return { ok: false, error: "Le catalogue commun ne répond pas. Réessaie plus tard." };
+    return await r.json();
+  } catch (e) { return { ok: false, error: "Pas de connexion au catalogue commun." }; }
+}
+
+// Etat du compte dans le bandeau
+function afficherCompte() {
+  const s = lireSession();
+  $("etatCompte").textContent = s ? (s.user?.email || "") : "Lecture seule";
+  $("etatCompte").classList.toggle("on", !!s);
+  $("compteBtn").textContent = s ? "Se déconnecter" : "Se connecter";
+}
+function demanderConnexion() {
+  if (lireSession()) return Promise.resolve(true);
+  const d = $("dConnexion"), f = $("formConnexion");
+  f.reset(); $("cErreur").textContent = ""; d.showModal(); $("cEmail").focus();
+  return new Promise((resolve) => {
+    const fin = (ok) => { d.removeEventListener("close", surFermeture); resolve(ok); };
+    const surFermeture = () => fin(!!lireSession());
+    d.addEventListener("close", surFermeture);
+  });
+}
+$("formConnexion").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const bouton = $("cOk"); bouton.disabled = true;
+  const err = !$("cEmail").value || !$("cMdp").value ? "Saisis l'email et le mot de passe." : await seConnecter($("cEmail").value, $("cMdp").value);
+  bouton.disabled = false;
+  if (err) { $("cErreur").textContent = err; return; }
+  $("dConnexion").close(); afficherCompte(); synchroniser(); afficherBiblio();
+});
+$("cAnnuler").addEventListener("click", () => $("dConnexion").close());
+$("compteBtn").addEventListener("click", async () => {
+  if (lireSession()) { ecrireSession(null); toast("Déconnecté"); afficherCompte(); afficherBiblio(); } else { await demanderConnexion(); afficherCompte(); }
+});
+window.addEventListener("storage", (e) => { if (e.key === SESSION_KEY) { afficherCompte(); afficherBiblio(); } });
+
+const idsUtilises = () => new Set(lignes.map((l) => l.produit));
+async function synchroniser(manuel = false) {
+  partage.etat = "sync"; afficherEtatPartage();
+  let rows = null;
+  try { const r = await sb("/rest/v1/membrane_catalogue?select=id,data,deleted_at"); if (r.ok) rows = await r.json(); } catch (e) { /* hors ligne */ }
+  if (!Array.isArray(rows)) {
+    partage.etat = "hors"; afficherEtatPartage();
+    if (manuel) toast("Catalogue commun injoignable : Membrane continue avec la copie de ce poste");
+    return;
+  }
+  distant = Object.fromEntries(rows.filter((r) => !r.deleted_at).map((r) => [r.id, r.data]));
+  const f = mergeShared(produitsEnListe(), rows, base, idsUtilises());
+  if (f.items.length) chargerListe(f.items);
+  base = f.base; sauverBase(); sauverCatalogue();
+  partage.etat = "ok"; partage.at = new Date();
+  afficherEtatPartage(); afficherBiblio(); maj(); afficherCommande();
+  if (f.updated || manuel) toast(f.updated ? `Catalogue mis à jour depuis l'équipe (${f.updated} produit${f.updated > 1 ? "s" : ""})` : "Catalogue commun à jour");
+}
+function afficherEtatPartage() {
+  const e = partage.etat;
+  $("biblioEtat").innerHTML = (e === "sync" ? "Mise à jour du catalogue commun…" : e === "hors" ? "Catalogue commun injoignable : copie de ce poste." : `Catalogue commun à jour${partage.at ? " (" + partage.at.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" }) + ")" : ""}.`)
+    + ` <button type="button" class="linkbtn" id="biblioSync">Actualiser</button>`;
+}
+$("biblioEtat").addEventListener("click", (e) => { if (e.target.id === "biblioSync") synchroniser(true); });
+const itemAvecId = (id) => ({ ...PRODUITS[id], id });
+async function envoyer(id) {
+  if (!(await demanderConnexion())) return;
+  const item = itemAvecId(id);
+  const r = await rpc("membrane_save_item", { p: item });
+  if (!r?.ok) { toast(r?.error || "Envoi impossible."); return; }
+  base[id] = stable(item); distant[id] = item; sauverBase(); afficherBiblio(); toast("Envoyé à l'équipe");
+}
+async function retirerDuPartage(id) {
+  if (!(await demanderConnexion())) return false;
+  const r = await rpc("membrane_delete_item", { p_id: id });
+  if (!r?.ok) { toast(r?.error || "Retrait impossible."); return false; }
+  delete base[id]; delete distant[id]; sauverBase(); return true;
+}
+function annulerModifs(id) {
+  const d = distant[id], n = nettoyerProduit(d); if (!n) { toast("Version de l'équipe indisponible : actualise le catalogue"); return; }
+  chargerListe(produitsEnListe().map((x) => (x.id === id ? { ...n, id } : x)));
+  sauverCatalogue(); afficherBiblio(); maj(); afficherCommande(); toast("Version de l'équipe rétablie");
+}
+
+// ---------- Lien vers la fiche technique dans Index (liste lue en lecture seule dans la base d'Index) ----------
+const ficheUrl = (id) => `${INDEX_URL}/?fiche=${encodeURIComponent(id)}`;
+let fichesIndex = null;
+function chargerFiches() {
+  fichesIndex ??= fetch(`${SB_URL}/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+    .then((rows) => rows.filter((r) => !r.deleted_at))
+    .catch((e) => { fichesIndex = null; throw e; });
+  return fichesIndex;
+}
+const sansAccents = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+function chercherFiches(liste, q) {
+  const mots = sansAccents(q).split(/\s+/).filter(Boolean);
+  return liste.filter((f) => { const h = sansAccents(`${f.name} ${f.supplier} ${f.category}`); return mots.every((m) => h.includes(m)); }).slice(0, 8);
+}
+const ficheLien = (f) => `<a class="fiche-link" href="${ficheUrl(f.id)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la fiche technique dans Index">📄 ${esc(f.name)} <span aria-hidden="true">↗</span></a>`;
+
+// ---------- Bibliotheque : voir les largeurs, ajouter / modifier / partager / supprimer des produits ----------
 const mmListe = (l) => l.join(", ");
 const lireMm = (txt) => String(txt).split(/[\s,;]+/).filter(Boolean).map((x) => nombre(x));
+const ETATS = { shared: ["Partagé avec l'équipe", "ok"], modified: ["Modifié ici, pas encore envoyé", "warn"], local: ["Sur ce poste seulement", ""] };
 let biblioEdit = null; // id du produit en cours de modification ("" = nouveau)
+let ficheForm = null, fichePicking = false; // fiche Index choisie dans le formulaire
 function afficherBiblio() {
-  const ids = Object.keys(PRODUITS);
+  const ids = Object.keys(PRODUITS), connecte = !!lireSession();
   $("biblioSub").textContent = `${ids.length} produit${ids.length > 1 ? "s" : ""}`;
   $("biblioListe").innerHTML = ids.map((k) => {
-    const p = PRODUITS[k];
+    const p = PRODUITS[k], etat = sharedStatus(itemAvecId(k), base), [et, cl] = ETATS[etat];
     const chips = p.largeurs.map((w) => `<span class="chip${p.surDemande.includes(w) ? " dem" : ""}" title="${p.surDemande.includes(w) ? "Sur demande" : "En stock"}">${w}${p.surDemande.includes(w) ? "*" : ""}</span>`).join("");
-    return `<div class="prod"><div class="ph"><b>${esc(p.nom)}</b>${p.fournisseur ? `<span class="fo">${esc(p.fournisseur)}</span>` : ""}${p.role ? `<span class="ro">${esc(p.role)}</span>` : ""}</div>
+    const boutons = [`<button type="button" class="mini" data-a="edit" data-k="${esc(k)}">Modifier</button>`];
+    if (etat !== "shared") boutons.push(`<button type="button" class="mini pri" data-a="send" data-k="${esc(k)}">${connecte ? "Envoyer à l'équipe" : "Se connecter pour envoyer"}</button>`);
+    if (etat === "modified") boutons.push(`<button type="button" class="mini" data-a="revert" data-k="${esc(k)}">Annuler mes modifications</button>`);
+    boutons.push(`<button type="button" class="mini" data-a="del" data-k="${esc(k)}">${etat === "local" ? "Supprimer" : "Retirer pour l'équipe"}</button>`);
+    return `<div class="prod"><div class="ph"><b>${esc(p.nom)}</b>${p.fournisseur ? `<span class="fo">${esc(p.fournisseur)}</span>` : ""}${p.role ? `<span class="ro">${esc(p.role)}</span>` : ""}<span class="st ${cl}">${et}</span></div>
       <div class="chips">${chips}</div>
-      <div class="pm">Largeurs en mm${p.surDemande.length ? " (* sur demande)" : ""} · rouleaux de ${fmt(p.rouleauM, p.rouleauM % 1 ? 1 : 0)} m</div>
-      <div class="pa"><button type="button" class="mini" data-a="edit" data-k="${esc(k)}">Modifier</button><button type="button" class="mini" data-a="del" data-k="${esc(k)}">Supprimer</button></div></div>`;
+      <div class="pm">Largeurs en mm${p.surDemande.length ? " (* sur demande)" : ""} · rouleaux de ${fmt(p.rouleauM, p.rouleauM % 1 ? 1 : 0)} m${p.indexFiche ? ` · ${ficheLien(p.indexFiche)}` : ""}</div>
+      <div class="pa">${boutons.join("")}</div></div>`;
   }).join("");
 }
+function afficherFicheForm() {
+  const box = $("bFiche");
+  if (ficheForm) { box.innerHTML = `${ficheLien(ficheForm)} <button type="button" class="linkbtn" data-fiche="remove">Retirer</button>`; return; }
+  if (!fichePicking) { box.innerHTML = `<button type="button" class="linkbtn" data-fiche="pick">Lier une fiche Index</button>`; return; }
+  box.innerHTML = `<div class="fiche-pick"><input id="ficheSearch" type="text" placeholder="Rechercher dans Index…" aria-label="Rechercher une fiche dans Index" autocomplete="off"><div id="ficheResults" class="hint">Chargement…</div></div>`;
+  const input = $("ficheSearch");
+  const montrer = () => chargerFiches().then((liste) => {
+    const res = chercherFiches(liste, input.value);
+    $("ficheResults").innerHTML = res.length ? res.map((f) => `<button type="button" class="res" data-fiche-id="${esc(f.id)}" data-fiche-name="${esc(f.name)}">${esc(f.name)}<span class="sub">${esc(f.supplier)} · ${esc(f.category)}</span></button>`).join("") : "Aucune fiche trouvée.";
+  }, () => { $("ficheResults").textContent = "Index injoignable pour le moment."; });
+  input.addEventListener("input", montrer);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); fichePicking = false; afficherFicheForm(); }
+    if (e.key === "Enter") { e.preventDefault(); $("ficheResults").querySelector("[data-fiche-id]")?.click(); }
+  });
+  input.focus(); montrer();
+}
+$("bFiche").addEventListener("click", (e) => {
+  const x = e.target.closest("[data-fiche], [data-fiche-id]"); if (!x) return;
+  if (x.dataset.fiche === "pick") fichePicking = true;
+  else if (x.dataset.fiche === "remove") ficheForm = null;
+  else if (x.dataset.ficheId) { ficheForm = { id: x.dataset.ficheId, name: x.dataset.ficheName }; fichePicking = false; }
+  afficherFicheForm();
+});
 function ouvrirForm(k) {
   biblioEdit = k;
   const p = k ? PRODUITS[k] : null;
@@ -385,6 +560,7 @@ function ouvrirForm(k) {
   $("bNom").value = p?.nom ?? ""; $("bFour").value = p?.fournisseur ?? ""; $("bRole").value = p?.role ?? "";
   $("bLong").value = p ? String(p.rouleauM).replace(".", ",") : "25";
   $("bLarg").value = p ? mmListe(p.largeurs.filter((w) => !p.surDemande.includes(w))) : ""; $("bDem").value = p ? mmListe(p.surDemande) : "";
+  ficheForm = p?.indexFiche ?? null; fichePicking = false; afficherFicheForm();
   $("biblioErr").textContent = ""; $("biblioForm").classList.remove("hidden");
   $("bNom").focus();
 }
@@ -403,32 +579,27 @@ $("biblioForm").addEventListener("submit", (e) => {
     : Object.entries(PRODUITS).some(([k, p]) => k !== biblioEdit && p.nom.toLowerCase() === nom.toLowerCase()) ? "Un produit porte déjà ce nom." : "";
   if (err) { $("biblioErr").innerHTML = `<p>${esc(err)}</p>`; return; }
   const id = biblioEdit || `p${Date.now().toString(36)}`;
-  const nouveau = { ...PRODUITS, [id]: { nom, court: nom, fournisseur: $("bFour").value, role: $("bRole").value, largeurs: [...std, ...dem], surDemande: dem, rouleauM: long } };
-  chargerCatalogue(nouveau); sauverCatalogue(); fermerForm(); afficherBiblio(); maj(); afficherCommande();
-  toast(biblioEdit ? "Produit modifié" : "Produit ajouté");
+  const produit = { nom, court: nom, fournisseur: $("bFour").value, role: $("bRole").value, largeurs: [...std, ...dem], surDemande: dem, rouleauM: long, ...(ficheForm ? { indexFiche: ficheForm } : {}) };
+  chargerCatalogue({ ...PRODUITS, [id]: produit }); sauverCatalogue(); fermerForm(); afficherBiblio(); maj(); afficherCommande();
+  toast(biblioEdit ? "Produit modifié" : "Produit ajouté : envoie-le à l'équipe pour le partager");
 });
-$("biblioListe").addEventListener("click", (e) => {
+let armeSuppr = null, armeT;
+$("biblioListe").addEventListener("click", async (e) => {
   const x = e.target.closest("button[data-a]"); if (!x) return;
   const k = x.dataset.k;
   if (x.dataset.a === "edit") { ouvrirForm(k); return; }
+  if (x.dataset.a === "send") { await envoyer(k); return; }
+  if (x.dataset.a === "revert") { annulerModifs(k); return; }
   if (Object.keys(PRODUITS).length <= 1) { toast("Il faut garder au moins un produit"); return; }
   if (lignes.some((l) => l.produit === k)) { toast("Ce produit est utilisé dans la commande : retire d'abord ces lignes"); return; }
   if (armeSuppr !== k) { armeSuppr = k; x.textContent = "Sûr ? Clique encore"; clearTimeout(armeT); armeT = setTimeout(() => { armeSuppr = null; afficherBiblio(); }, 4000); return; }
-  armeSuppr = null; const rest = { ...PRODUITS }; delete rest[k];
+  armeSuppr = null;
+  if (sharedStatus(itemAvecId(k), base) !== "local" && !(await retirerDuPartage(k))) { afficherBiblio(); return; }
+  const rest = { ...PRODUITS }; delete rest[k];
   chargerCatalogue(rest); sauverCatalogue(); afficherBiblio(); maj(); afficherCommande(); toast("Produit supprimé");
-});
-let armeSuppr = null, armeT;
-let resetArme = false;
-$("biblioReset").addEventListener("click", () => {
-  if (!resetArme) { resetArme = true; $("biblioReset").textContent = "Sûr ? Les produits ajoutés seront perdus. Clique encore"; setTimeout(() => { resetArme = false; $("biblioReset").textContent = "Rétablir les produits d'origine (Sika)"; }, 4000); return; }
-  resetArme = false; $("biblioReset").textContent = "Rétablir les produits d'origine (Sika)";
-  const sauve = { ...PRODUITS };
-  chargerCatalogue(null);
-  if (lignes.some((l) => !PRODUITS[l.produit])) { chargerCatalogue(sauve); toast("Des lignes de la commande utilisent un produit ajouté : retire-les d'abord"); return; }
-  sauverCatalogue(); fermerForm(); afficherBiblio(); maj(); afficherCommande(); toast("Produits d'origine rétablis");
 });
 
 // ---------- Demarrage ----------
 $("produitSel").innerHTML = selHtml("produit", "Produit utilisé");
-afficherBiblio();
+afficherBiblio(); afficherEtatPartage(); afficherCompte(); synchroniser();
 lignesTroncons(); maj(); afficherCommande();

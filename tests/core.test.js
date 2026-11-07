@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau } from "../js/core.js";
+import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "../js/core.js";
 
 const proche = (a, b, m) => assert.ok(Math.abs(a - b) < 1e-6, `${m ?? ""} ${a} ≠ ${b}`);
 
@@ -151,4 +151,34 @@ test("bibliotheque : nettoyage, produit d'un autre fournisseur, retour aux produ
   assert.deepEqual(Object.keys(PRODUITS), Object.keys(PRODUITS_DEFAUT));
   assert.equal(libelleProduit("outplus"), "SikaMembran Outdoor plus");
   assert.equal(libelleProduit("inconnu"), "(produit supprime)");
+});
+
+test("lien vers une fiche Index : garde id et nom, ignore le reste", () => {
+  assert.deepEqual(nettoyerProduit({ nom: "A", largeurs: [100], indexFiche: { id: "f1", name: "Fiche A", x: 1 } }).indexFiche, { id: "f1", name: "Fiche A" });
+  assert.equal("indexFiche" in nettoyerProduit({ nom: "A", largeurs: [100], indexFiche: { id: "", name: "x" } }), false);
+  assert.equal(nettoyerProduit({ nom: "", largeurs: [100] }), null);
+});
+
+test("catalogue commun : fusion (nouveau, mis a jour, modifie ici, retire, jamais partage)", () => {
+  chargerCatalogue(null);
+  const p = (nom, l = [100]) => ({ nom, largeurs: l });
+  const loc = (id, nom, l) => ({ ...nettoyerProduit(p(nom, l)), id });
+  const eq = loc("a", "A"), base0 = { a: stable(eq) };
+  // equipe : A modifie (150), B nouveau ; local : A inchange, C jamais partage
+  const r1 = mergeShared([eq, loc("c", "C")], [{ id: "a", data: p("A", [100, 150]) }, { id: "b", data: p("B") }], base0);
+  assert.deepEqual(r1.items.map((x) => x.id), ["a", "c", "b"]);
+  assert.deepEqual(r1.items[0].largeurs, [100, 150]); assert.equal(r1.updated, 2);
+  assert.deepEqual([r1.status.a, r1.status.b, r1.status.c], ["shared", "shared", "local"]);
+  // modifie ici : on garde la version locale
+  const mod = { ...eq, largeurs: [100, 200] };
+  const r2 = mergeShared([mod], [{ id: "a", data: p("A", [100, 150]) }], base0);
+  assert.deepEqual(r2.items[0].largeurs, [100, 200]); assert.equal(r2.status.a, "modified");
+  assert.equal(sharedStatus(mod, r2.base), "modified"); assert.equal(sharedStatus(eq, base0), "shared"); assert.equal(sharedStatus(eq, {}), "local");
+  // retire par l'equipe : disparait, sauf modifie ici ou utilise par la commande
+  assert.equal(mergeShared([eq], [{ id: "a", data: p("A"), deleted_at: "2026-11-07" }], base0).items.length, 0);
+  assert.equal(mergeShared([eq], [{ id: "a", data: p("A"), deleted_at: "2026-11-07" }], base0, new Set(["a"])).items.length, 1);
+  assert.equal(mergeShared([mod], [{ id: "a", data: p("A"), deleted_at: "2026-11-07" }], base0).items.length, 1);
+  // aller-retour liste <-> bibliotheque
+  chargerListe(r1.items); assert.deepEqual(Object.keys(PRODUITS), ["a", "c", "b"]); assert.equal(produitsEnListe()[0].id, "a");
+  chargerCatalogue(null);
 });

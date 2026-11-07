@@ -2,6 +2,7 @@
 // Resultat : checkup.txt (OK / ECHEC) + captures d'ecran.
 import { chromium } from "playwright";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { PRODUITS_DEFAUT } from "../js/core.js";
 
 const BASE = process.env.APP_URL ?? "http://127.0.0.1:8090/";
 const OUT = process.argv[2] ?? "captures";
@@ -10,11 +11,37 @@ const lignes = [];
 const verif = (nom, ok, detail = "") => lignes.push(`${ok ? "OK    " : "ECHEC "} ${nom}${detail ? ` (${detail})` : ""}`);
 const choisir = async (page, box, k) => { await page.locator(`${box} .sel-btn`).click(); await page.locator(`${box} .sel-pop button[data-k="${k}"]`).click(); };
 const step = async (nom, fn) => { try { await fn(); } catch (e) { verif(nom, false, e.message.split("\n")[0].slice(0, 180)); } };
+
+// Faux serveur de l'equipe (Supabase d'Index) : catalogue commun, envoi, retrait, fiches Index, connexion
+const FICHES = [{ id: "f1", name: "SikaMembran Outdoor plus : fiche technique", supplier: "Sika", category: "Membranes" }, { id: "f2", name: "Isover Vario Xtra : fiche technique", supplier: "Isover", category: "Membranes" }];
+let equipe = {};
+const initEquipe = () => { equipe = Object.fromEntries(Object.entries(PRODUITS_DEFAUT).map(([id, p]) => [id, { id, data: { ...p, id }, deleted_at: null }])); };
+initEquipe();
+const SB = "ngfzwfbraqkdcocdcmib.supabase.co";
+async function brancherEquipe(c) {
+  await c.route(`https://${SB}/**`, async (route) => {
+    const req = route.request(), url = req.url(), json = (o, s = 200) => route.fulfill({ status: s, contentType: "application/json", body: JSON.stringify(o) });
+    const connecte = !/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZSIs/.test(req.headers().authorization ?? "");
+    if (url.includes("/auth/v1/token")) return json({ access_token: "tok-hugo", refresh_token: "ref", expires_in: 3600, user: { id: "u1", email: "hugo@test.fr" } });
+    if (url.includes("/rest/v1/membrane_catalogue")) return json(Object.values(equipe));
+    if (url.includes("/rest/v1/products")) return json(FICHES);
+    if (url.includes("/rpc/membrane_save_item")) {
+      if (!connecte) return json({ ok: false, error: "Connectez-vous avec votre compte Index pour modifier." });
+      const p = JSON.parse(req.postData()).p; equipe[p.id] = { id: p.id, data: p, deleted_at: null }; return json({ ok: true });
+    }
+    if (url.includes("/rpc/membrane_delete_item")) {
+      if (!connecte) return json({ ok: false, error: "Connectez-vous avec votre compte Index pour modifier." });
+      const id = JSON.parse(req.postData()).p_id; if (equipe[id]) equipe[id].deleted_at = "2026-11-07"; return json({ ok: true });
+    }
+    return route.abort();
+  });
+}
 const browser = await chromium.launch();
 
 async function ouvrir({ largeur = 1440, hauteur = 900, sombre = false, acceptDownloads = false } = {}) {
   const c = await browser.newContext({ viewport: { width: largeur, height: hauteur }, acceptDownloads, permissions: ["clipboard-read", "clipboard-write"] });
   await c.addInitScript((d) => { if (d) localStorage.setItem("outils-theme", "dark"); }, sombre);
+  await brancherEquipe(c);
   const page = await c.newPage();
   page.on("pageerror", (e) => verif("Aucune erreur JavaScript", false, e.message.slice(0, 150)));
   await page.goto(BASE, { waitUntil: "load" });
@@ -107,12 +134,16 @@ await step("Reglages : colle 7,5 m, marge, recouvrement", async () => {
   await c.close();
 });
 
-await step("Bibliotheque : largeurs, ajouter un produit d'un autre fournisseur, modifier, supprimer", async () => {
+await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index, partage avec l'equipe", async () => {
+  initEquipe();
   const { c, page } = await ouvrir();
   verif("Plus de phrase d'accroche dans le bandeau", (await page.locator(".tagline").count()) === 0);
+  verif("Sans compte : « Lecture seule »", (await txt(page, "#etatCompte")) === "Lecture seule");
   await page.click("#voirBiblio");
   verif("Le lien ouvre la bibliotheque", await page.locator("#biblio").evaluate((d) => d.open));
-  verif("3 produits Sika avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")) && /Largeurs en mm \(\* sur demande\) · rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  verif("3 produits Sika, partages avec l'equipe, avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 3 && (await page.locator("#biblioListe .st.ok").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")) && /rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  await page.waitForFunction(() => /à jour/.test(document.getElementById("biblioEtat").textContent), null, { timeout: 4000 }).catch(() => {});
+  verif("Etat du catalogue commun : a jour", /Catalogue commun à jour/.test(await txt(page, "#biblioEtat")), await txt(page, "#biblioEtat"));
   await page.click("#biblioNouveau");
   await page.click("#biblioForm button[type=submit]");
   verif("Nom obligatoire", /nom au produit/.test(await txt(page, "#biblioErr")), await txt(page, "#biblioErr"));
@@ -120,31 +151,54 @@ await step("Bibliotheque : largeurs, ajouter un produit d'un autre fournisseur, 
   await page.click("#biblioForm button[type=submit]");
   verif("Largeur illisible refusee", /nombres en mm/.test(await txt(page, "#biblioErr")), await txt(page, "#biblioErr"));
   await page.fill("#bLarg", "1000, 1500"); await page.fill("#bDem", "2000");
+  await page.click("#bFiche [data-fiche=pick]");
+  await page.fill("#ficheSearch", "isover");
+  verif("Recherche d'une fiche dans Index", (await page.locator("#ficheResults [data-fiche-id]").count()) === 1, await txt(page, "#ficheResults"));
+  await page.click("#ficheResults [data-fiche-id]");
+  verif("Fiche Index liee dans le formulaire", /Isover Vario Xtra : fiche technique/.test(await txt(page, "#bFiche")), await txt(page, "#bFiche"));
   await page.click("#biblioForm button[type=submit]");
-  verif("Produit ajoute a la bibliotheque", (await page.locator("#biblioListe .prod").count()) === 4 && /Isover Vario Xtra/.test(await txt(page, "#biblioListe")) && /rouleaux de 50 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  verif("Produit ajoute : sur ce poste seulement, avec le lien vers sa fiche", (await page.locator("#biblioListe .prod").count()) === 4 && /Sur ce poste seulement/.test(await txt(page, "#biblioListe")) && (await page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1, await txt(page, "#biblioListe"));
   await page.locator("#produitSel .sel-btn").click();
   verif("Il apparait dans la liste du produit utilise", (await page.locator("#produitSel .sel-pop button").count()) === 4);
   await page.locator('#produitSel .sel-pop button:has-text("Isover")').click();
+  verif("La fiche technique est proposee sous le produit", (await page.locator('#produitFiche a[href$="?fiche=f2"]').count()) === 1, await txt(page, "#produitFiche"));
   await page.locator("#segs .row:nth-child(1) input").fill("900"); await page.locator("#segs .row:nth-child(2) input").fill("0"); await page.locator("#segs .row:nth-child(3) input").fill("0");
   await page.fill("#longueur", "30");
   verif("Largeur 1000 en stock, un seul rouleau de 50 m", /1 rouleau de 1000 mm/.test(await txt(page, "#rRoul") + " " + await txt(page, "#rRoulL")), await txt(page, "#rRoul") + " " + await txt(page, "#rRoulL"));
   await page.click("#ajouter");
   verif("La commande indique le fournisseur et le rouleau de 50 m", /Isover Vario Xtra \(Saint-Gobain\), 1000 mm, rouleau de 50 m/.test(await txt(page, "#cmdTotal")), await txt(page, "#cmdTotal"));
-  await page.reload(); await page.waitForTimeout(200);
-  await page.click("#voirBiblio");
-  verif("La bibliotheque est gardee apres rechargement", (await page.locator("#biblioListe .prod").count()) === 4);
+  // Envoi a l'equipe : demande la connexion
+  await page.locator('#biblioListe .prod:has-text("Isover") button[data-a="send"]').click();
+  verif("Envoyer sans compte : la fenetre de connexion s'ouvre", await page.locator("#dConnexion").evaluate((d) => d.open));
+  await page.click("#cOk");
+  verif("Connexion : champs obligatoires", /email et le mot de passe/.test(await txt(page, "#cErreur")), await txt(page, "#cErreur"));
+  await page.fill("#cEmail", "hugo@test.fr"); await page.fill("#cMdp", "secret");
+  await page.click("#cOk"); await page.waitForTimeout(500);
+  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 4 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
+  verif("Le produit envoye garde sa fiche et son rouleau de 50 m", Object.values(equipe).some((e) => e.data.indexFiche?.id === "f2" && e.data.rouleauM === 50));
+  verif("Le produit est maintenant « partage avec l'equipe »", (await page.locator("#biblioListe .st.ok").count()) === 4, await txt(page, "#biblioListe"));
+  // Un collegue (autre poste) recoit le produit
+  const autre = await ouvrir();
+  verif("Autre poste : le produit de l'equipe est la, partage, avec sa fiche", (await autre.page.locator('#produitSel .sel-btn').count()) === 1 && await (async () => { await autre.page.click("#voirBiblio"); return (await autre.page.locator("#biblioListe .prod").count()) === 4 && (await autre.page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1; })());
+  await autre.c.close();
+  // Modifier un produit partage : « modifie ici », puis annuler mes modifications
+  await page.locator('#biblioListe .prod:has-text("Universal") button[data-a="edit"]').click();
+  await page.fill("#bDem", ""); await page.click("#biblioForm button[type=submit]");
+  const uni = await txt(page, '#biblioListe .prod:has-text("Universal")');
+  verif("Modifier un produit partage : « Modifié ici » et plus de 1400", /Modifié ici/.test(uni) && !/1400/.test(uni) && /Annuler mes modifications/.test(uni) && /Envoyer à l'équipe/.test(uni), uni);
+  await page.locator('#biblioListe .prod:has-text("Universal") button[data-a="revert"]').click();
+  verif("Annuler mes modifications : version de l'equipe retablie", /1400\*/.test(await txt(page, '#biblioListe .prod:has-text("Universal")')) && /Partagé avec l'équipe/.test(await txt(page, '#biblioListe .prod:has-text("Universal")')));
+  await page.reload(); await page.waitForTimeout(400); await page.click("#voirBiblio");
+  verif("Apres rechargement : 4 produits, tous partages, connexion gardee", (await page.locator("#biblioListe .prod").count()) === 4 && (await page.locator("#biblioListe .st.ok").count()) === 4 && (await txt(page, "#etatCompte")) === "hugo@test.fr");
   const supp = page.locator('#biblioListe .prod:has-text("Isover") button[data-a="del"]');
   await supp.click();
   verif("Produit utilise dans la commande : suppression refusee", (await page.locator("#biblioListe .prod").count()) === 4 && /utilisé dans la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
   await page.locator("#cmdLignes button[data-a='del']").first().click();
-  await supp.click(); await supp.click();
-  verif("Supprime apres confirmation", (await page.locator("#biblioListe .prod").count()) === 3);
-  await page.locator('#biblioListe .prod:has-text("Universal") button[data-a="edit"]').click();
-  await page.fill("#bDem", ""); await page.click("#biblioForm button[type=submit]");
-  const uni = await txt(page, '#biblioListe .prod:has-text("Universal")');
-  verif("Modifier : sans largeur sur demande, Universal perd le 1400", /350/.test(uni) && !/1400/.test(uni), uni);
-  await page.click("#biblioReset"); await page.click("#biblioReset");
-  verif("Produits d'origine retablis", (await page.locator("#biblioListe .prod").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")));
+  verif("Produit partage : le bouton dit « Retirer pour l'equipe »", /Retirer pour l'équipe/.test(await txt(page, '#biblioListe .prod:has-text("Isover") .pa')));
+  await supp.click(); await supp.click(); await page.waitForTimeout(300);
+  verif("Retire pour l'equipe : disparait ici et chez l'equipe", (await page.locator("#biblioListe .prod").count()) === 3 && Object.values(equipe).some((e) => e.data.nom === "Isover Vario Xtra" && e.deleted_at), await txt(page, "#biblioListe"));
+  await page.click("#compteBtn");
+  verif("Se deconnecter : retour en lecture seule", (await txt(page, "#etatCompte")) === "Lecture seule");
   await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true });
   await c.close();
 });
@@ -216,7 +270,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.4", /Membrane v1\.4/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.5", /Membrane v1\.5/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
   verif("Le menu liste Membrane et les autres applis", /Membrane Étanchéité ✓/.test(menu) && /Joint Dilatation et joints/.test(menu), menu.slice(0, 200));
