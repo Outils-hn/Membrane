@@ -226,3 +226,8 @@ dialog a { color: inherit; }
 .about-head { display: flex; align-items: center; gap: 12px; }
 .about-head b { display: block; font-size: 18px; }
 .apropos .actions { justify-content: flex-end; }
+
+/* Valeur sd (info) et case « autocollante » */
+.hint-sd { color: var(--muted); font-size: 12px; }
+.cb { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; }
+.cb input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }

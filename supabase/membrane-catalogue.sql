@@ -54,6 +54,7 @@ grant execute on function public.membrane_save_item(jsonb), public.membrane_dele
 
 -- Produits d'origine (Sika) : ajoutes seulement s'ils n'existent pas deja
 insert into public.membrane_catalogue (id, data) values
-  ('outplus', '{"id": "outplus", "nom": "SikaMembran Outdoor plus", "court": "Outdoor plus", "fournisseur": "Sika", "role": "pare-pluie", "largeurs": [100, 150, 200, 250, 300, 1400], "surDemande": [1400], "rouleauM": 25}'::jsonb),
-  ('uni', '{"id": "uni", "nom": "SikaMembran Universal", "court": "Universal", "fournisseur": "Sika", "role": "pare-vapeur", "largeurs": [100, 150, 200, 250, 300, 350, 1400], "surDemande": [1400], "rouleauM": 25}'::jsonb)
+  ('outplus', '{"id": "outplus", "nom": "SikaMembran Outdoor plus", "court": "Outdoor plus", "fournisseur": "Sika", "role": "pare-pluie", "largeurs": [100, 150, 200, 250, 300, 1400], "surDemande": [1400], "rouleauM": 25, "sd": 4}'::jsonb),
+  ('uni', '{"id": "uni", "nom": "SikaMembran Universal", "court": "Universal", "fournisseur": "Sika", "role": "pare-vapeur", "largeurs": [100, 150, 200, 250, 300, 350, 1400], "surDemande": [1400], "rouleauM": 25, "sd": 60}'::jsonb),
+  ('unisb', '{"id": "unisb", "nom": "SikaMembran Universal SB", "court": "Universal SB", "fournisseur": "Sika", "role": "autocollante", "largeurs": [100, 150, 200, 250, 350], "surDemande": [250, 350], "rouleauM": 25, "sd": 60, "autocollant": true}'::jsonb)
 on conflict (id) do nothing;

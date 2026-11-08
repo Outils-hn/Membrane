@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.8 — 8 novembre 2026
+
+- Nouveauté : la SikaMembran Universal SB (autocollante) est dans la bibliothèque : choisie, elle ne compte aucune colle. La valeur sd (résistance à la vapeur d'eau) s'affiche en petit sous le produit et dans la bibliothèque, et chaque produit peut avoir la sienne. (À activer une fois : script `supabase/membrane-universal-sb.sql`.)
+
 ## 1.7 — 8 novembre 2026
 
 - Nouveauté : un clic sur « Conçu par Hugo N. » en bas de page ouvre la même fenêtre « À propos » que dans les autres applis (nom, version, description, dernière mise à jour).

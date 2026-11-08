@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.7">
+<link rel="stylesheet" href="styles.css?v=1.8">
 </head>
 <body>
 <header class="topbar">
@@ -102,6 +102,10 @@
       </div>
       <label class="f"><span class="lbl">Largeurs en stock (mm), séparées par des virgules</span><input id="bLarg" inputmode="numeric" placeholder="ex. 100, 150, 200, 250, 300"></label>
       <label class="f"><span class="lbl">Largeurs sur demande (mm), facultatif</span><input id="bDem" inputmode="numeric" placeholder="ex. 1400"></label>
+      <div class="duo">
+        <label class="f"><span class="lbl">Valeur sd en m (pour info), facultatif</span><span class="withu"><input id="bSd" inputmode="decimal" placeholder="ex. 60"><em>m</em></span></label>
+        <label class="f chk"><span class="lbl">Colle</span><span class="cb"><input type="checkbox" id="bAuto"> Membrane autocollante (pas de colle)</span></label>
+      </div>
       <div class="f"><span class="lbl">Fiche technique (Index), facultatif</span><div id="bFiche"></div></div>
       <div class="alertes" id="biblioErr" role="alert"></div>
       <div class="actions"><button type="submit" class="btn">Enregistrer</button><button type="button" class="btn ghost" id="biblioAnnuler">Annuler</button></div>
@@ -127,7 +131,7 @@
 
 </div>
 </main>
-<footer>Membrane v1.7 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.7&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.8 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.8&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <dialog id="dConnexion" aria-labelledby="dc-titre">
   <form id="formConnexion" method="dialog">
     <h3 id="dc-titre">Connexion</h3>
@@ -146,7 +150,7 @@
         <path d="M2 17h9l8-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M2.5 17h5" stroke="var(--accent)" stroke-width="5" stroke-linecap="butt"/>
       </svg>
-      <div><b>Membrane</b><span class="hint">Version 1.7</span></div></div>
+      <div><b>Membrane</b><span class="hint">Version 1.8</span></div></div>
     <p>Conçu et développé par Hugo N.</p>
     <p class="hint">Bande de membrane dessinée en tronçons : colle, rouleaux, chutes et bon de commande PDF par façade et par étage.</p>
     <p class="hint">Dernière mise à jour : 8 novembre 2026</p>
@@ -154,6 +158,6 @@
   </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.7"></script>
+<script type="module" src="js/app.js?v=1.8"></script>
 </body>
 </html>
