@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.6">
+<link rel="stylesheet" href="styles.css?v=1.7">
 </head>
 <body>
 <header class="topbar">
@@ -127,7 +127,7 @@
 
 </div>
 </main>
-<footer>Membrane v1.6 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.6&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.7 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.7&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <dialog id="dConnexion" aria-labelledby="dc-titre">
   <form id="formConnexion" method="dialog">
     <h3 id="dc-titre">Connexion</h3>
@@ -139,7 +139,21 @@
     <div class="actions"><button type="button" class="btn ghost" id="cAnnuler">Annuler</button><button type="submit" class="btn" id="cOk">Se connecter</button></div>
   </form>
 </dialog>
+<dialog id="dApropos" aria-labelledby="da-titre">
+  <div class="apropos">
+    <h3 id="da-titre">À propos</h3>
+    <div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true">
+        <path d="M2 17h9l8-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M2.5 17h5" stroke="var(--accent)" stroke-width="5" stroke-linecap="butt"/>
+      </svg>
+      <div><b>Membrane</b><span class="hint">Version 1.7</span></div></div>
+    <p>Conçu et développé par Hugo N.</p>
+    <p class="hint">Bande de membrane dessinée en tronçons : colle, rouleaux, chutes et bon de commande PDF par façade et par étage.</p>
+    <p class="hint">Dernière mise à jour : 8 novembre 2026</p>
+    <div class="actions"><button type="button" class="btn ghost" id="daFermer">Fermer</button></div>
+  </div>
+</dialog>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.6"></script>
+<script type="module" src="js/app.js?v=1.7"></script>
 </body>
 </html>

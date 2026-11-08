@@ -365,7 +365,9 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.6 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => $("dApropos").showModal());
+$("daFermer").addEventListener("click", () => $("dApropos").close());
+$("dApropos").addEventListener("click", (e) => { if (e.target === $("dApropos")) $("dApropos").close(); });
 
 // ---------- Catalogue commun a l'equipe (base d'Index) : compte, lecture, envoi, retrait ----------
 // Lecture libre ; envoi et retrait : compte Index valide (meme connexion que les autres applis, meme site).
