@@ -56,10 +56,17 @@ grant execute on function public.membrane_save_item(jsonb), public.membrane_dele
 insert into public.membrane_catalogue (id, data) values
   ('outplus', '{"id": "outplus", "nom": "SikaMembran Outdoor plus", "court": "Outdoor plus", "fournisseur": "Sika", "role": "pare-pluie", "largeurs": [100, 150, 200, 250, 300, 1400], "surDemande": [1400], "rouleauM": 25, "sd": 4}'::jsonb),
   ('uni', '{"id": "uni", "nom": "SikaMembran Universal", "court": "Universal", "fournisseur": "Sika", "role": "pare-vapeur", "largeurs": [100, 150, 200, 250, 300, 350, 1400], "surDemande": [1400], "rouleauM": 25, "sd": 60}'::jsonb),
-  ('unisb', '{"id": "unisb", "nom": "SikaMembran Universal SB", "court": "Universal SB", "fournisseur": "Sika", "role": "autocollante", "largeurs": [100, 150, 200, 250, 350], "surDemande": [250, 350], "rouleauM": 25, "sd": 60, "autocollant": true}'::jsonb)
+  ('unisb', '{"id": "unisb", "nom": "SikaMembran Universal SB", "court": "Universal SB", "fournisseur": "Sika", "role": "une face autocollante", "largeurs": [100, 150, 200, 250, 350], "surDemande": [250, 350], "rouleauM": 25, "sd": 60, "autocollant": "face"}'::jsonb)
 on conflict (id) do nothing;
 
 -- Colle d'origine (Membrane 1.9 : la colle fait partie de la bibliotheque)
 insert into public.membrane_catalogue (id, data) values
   ('colle444', '{"id": "colle444", "type": "colle", "nom": "SikaBond-444 Membrane Fix", "court": "SikaBond-444", "fournisseur": "Sika", "ml": 600, "metres": 10, "metresMin": 7.5, "parCarton": 20, "cordonMm": 45}'::jsonb)
+on conflict (id) do nothing;
+
+-- Active+, Active SB+, Active FSB+ (Membrane 1.10)
+insert into public.membrane_catalogue (id, data) values
+  ('acplus', '{"id": "acplus", "nom": "SikaMembran Active+", "court": "Active+", "fournisseur": "Sika", "role": "freine-vapeur", "largeurs": [100, 150, 200, 250, 300, 1500], "surDemande": [250, 300], "rouleauM": 25, "sd": "0,5 à 20"}'::jsonb),
+  ('acsb', '{"id": "acsb", "nom": "SikaMembran Active SB+", "court": "Active SB+", "fournisseur": "Sika", "role": "freine-vapeur, une face autocollante", "largeurs": [100, 150, 200], "surDemande": [], "rouleauM": 25, "sd": "0,5 à 20", "autocollant": "face"}'::jsonb),
+  ('acfsb', '{"id": "acfsb", "nom": "SikaMembran Active FSB+", "court": "Active FSB+", "fournisseur": "Sika", "role": "freine-vapeur, autocollante", "largeurs": [80, 100, 150, 200, 250, 300, 350], "surDemande": [], "rouleauM": 25, "sd": "0,5 à 20", "autocollant": true}'::jsonb)
 on conflict (id) do nothing;

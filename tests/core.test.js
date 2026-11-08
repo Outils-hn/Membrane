@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { colles, colleChoisie, produitsMembrane, nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "../js/core.js";
+import { lireSd, sdTexte, colles, colleChoisie, produitsMembrane, nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "../js/core.js";
 
 const proche = (a, b, m) => assert.ok(Math.abs(a - b) < 1e-6, `${m ?? ""} ${a} ≠ ${b}`);
 
@@ -182,24 +182,31 @@ test("catalogue commun : fusion (nouveau, mis a jour, modifie ici, retire, jamai
   chargerCatalogue(null);
 });
 
-test("Universal SB : autocollante, pas de colle ; sd gardee dans la bibliotheque", () => {
-  assert.equal(PRODUITS_DEFAUT.unisb.autocollant, true);
-  assert.equal(PRODUITS_DEFAUT.uni.sd, 60);
+test("autocollantes : toute la surface = pas de colle ; une face = un cordon de moins ; sd en nombre ou en plage", () => {
+  assert.equal(PRODUITS_DEFAUT.unisb.autocollant, "face"); assert.equal(PRODUITS_DEFAUT.acfsb.autocollant, true); assert.equal(PRODUITS_DEFAUT.acplus.autocollant, undefined);
+  assert.equal(PRODUITS_DEFAUT.uni.sd, 60); assert.equal(PRODUITS_DEFAUT.acplus.sd, "0,5 à 20");
   chargerCatalogue(structuredClone(PRODUITS_DEFAUT));
-  const r = calculBande(z({ produit: "unisb" }));
-  assert.equal(r.auto, true); assert.equal(r.nCollés, 0); assert.equal(r.cordonM, 0); assert.equal(r.cartouches, 0);
-  assert.equal(r.alertes.length, 0);
-  const c = commande([z({ produit: "unisb" })]);
-  assert.equal(c.cartouches, 0); assert.equal(c.articles.length, 1);
+  // bande de depart : 2 troncons colles (1er et 3e) = 2 cordons ; une face : 1 seul ; toute la surface : 0
   assert.equal(calculBande(z()).nCollés, 2);
+  const sb = calculBande(z({ produit: "unisb" }));
+  assert.equal(sb.auto, "face"); assert.equal(sb.nCollés, 1); proche(sb.cordonM, sb.longueur); assert.equal(sb.cartouches, 2);
+  const fsb = calculBande(z({ produit: "acfsb" }));
+  assert.equal(fsb.auto, true); assert.equal(fsb.nCollés, 0); assert.equal(fsb.cordonM, 0); assert.equal(fsb.cartouches, 0); assert.equal(fsb.alertes.length, 0);
+  assert.equal(calculBande(z({ produit: "acplus" })).nCollés, 2);
+  const c = commande([z({ produit: "acfsb" })]);
+  assert.equal(c.cartouches, 0); assert.equal(c.articles.length, 1);
+  // nettoyage
   const n = nettoyerProduit({ nom: "X", largeurs: [100], sd: "abc", autocollant: "oui" });
   assert.equal(n.sd, undefined); assert.equal(n.autocollant, undefined);
-  assert.deepEqual([nettoyerProduit({ nom: "X", largeurs: [100], sd: 12.5, autocollant: true })].map((p) => [p.sd, p.autocollant]), [[12.5, true]]);
+  assert.deepEqual([nettoyerProduit({ nom: "X", largeurs: [100], sd: 12.5, autocollant: "face" })].map((p) => [p.sd, p.autocollant]), [[12.5, "face"]]);
+  assert.equal(nettoyerProduit({ nom: "X", largeurs: [100], sd: "0.5 a 20" }).sd, "0,5 à 20");
+  assert.equal(lireSd(""), null); assert.equal(lireSd("60"), 60); assert.equal(lireSd("0,5 à 20"), "0,5 à 20"); assert.equal(lireSd("x"), undefined);
+  assert.equal(sdTexte(60), "60"); assert.equal(sdTexte("0,5 à 20"), "0,5 à 20");
 });
 
 test("colles : dans la bibliotheque, au moins une, choisie pour la commande", () => {
   chargerCatalogue(null);
-  assert.deepEqual(colles().map((c) => c.id), ["colle444"]); assert.equal(produitsMembrane().length, 3);
+  assert.deepEqual(colles().map((c) => c.id), ["colle444"]); assert.equal(produitsMembrane().length, 6);
   assert.equal(colleChoisie({}).nom, "SikaBond-444 Membrane Fix"); assert.equal(colleChoisie({ colle: "inconnue" }).id, "colle444");
   // nettoyage : valeurs invalides = valeurs d'origine ; cas defavorable gardé seulement s'il est plus petit
   const n = nettoyerProduit({ type: "colle", nom: " Colle X ", fournisseur: "Autre", ml: "abc", metres: 8, metresMin: 9, parCarton: "12.4", cordonMm: -1 });

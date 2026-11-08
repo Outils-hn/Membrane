@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.10 — 8 novembre 2026
+
+- Nouveauté : les SikaMembran Active+, Active SB+ et Active FSB+ sont dans la bibliothèque, avec leur valeur sd (de 0,5 à 20 m). Une membrane à une face autocollante (Active SB+, et Universal SB corrigée) compte un cordon de colle de moins ; une membrane autocollante partout (Active FSB+) n'en compte aucun. Les colles peuvent aussi être liées à une fiche Index. (À activer une fois : script `supabase/membrane-active.sql`.)
+
 ## 1.9 — 8 novembre 2026
 
 - Nouveauté : la colle est dans la bibliothèque, comme les membranes : nom, fournisseur, contenu d'une cartouche, mètres couverts par cartouche, cartouches par carton, largeur du cordon. On choisit la colle dans les réglages, et on peut en ajouter d'autres, d'un autre fournisseur, et les partager avec l'équipe. (Pour partager la colle d'origine : script `supabase/membrane-colle.sql`.)

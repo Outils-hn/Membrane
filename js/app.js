@@ -1,5 +1,5 @@
 // Membrane : affichage et saisie. Les calculs sont dans core.js.
-import { PRODUITS, DIRS, colles, colleChoisie, produitsMembrane, libelleItem, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "./core.js";
+import { PRODUITS, DIRS, colles, colleChoisie, produitsMembrane, libelleItem, lireSd, sdTexte, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
 const CLE = "membrane.v1";
@@ -171,10 +171,11 @@ function dessiner() {
   const cw = Math.max(reglages(reg).cordon, 1);
   const f = (v) => v.toFixed(1);
   let glue = "", mem = "", hit = "", txt = "";
+  const au = PRODUITS[b.produit]?.autocollant ?? false, premier = b.segs.findIndex((s) => s.on && (nombre(s.len) || 0) > 0);
   b.segs.forEach((s, i) => {
     const a = P(pts[i]), c = P(pts[i + 1]), d = dir(s.dir), l = nombre(s.len) || 0;
     mem += `<polyline class="mem" points="${f(a[0])},${f(a[1])} ${f(c[0])},${f(c[1])}"/>`;
-    if (s.on && l > 0 && !PRODUITS[b.produit]?.autocollant) {
+    if (s.on && l > 0 && au !== true && !(au === "face" && i === premier)) {
       const [t0, t1] = positionCordon(i, b.segs.length, l, cw);
       const g0 = [a[0] + (c[0] - a[0]) * t0, a[1] + (c[1] - a[1]) * t0], g1 = [a[0] + (c[0] - a[0]) * t1, a[1] + (c[1] - a[1]) * t1];
       glue += `<polyline class="glue" points="${f(g0[0])},${f(g0[1])} ${f(g1[0])},${f(g1[1])}"/>`;
@@ -203,9 +204,11 @@ function maj() {
   $("cartSeg").querySelectorAll("button").forEach((x) => { const on = Math.abs(Number(x.dataset.m) - cartNum) < 1e-9; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
   if (!PRODUITS[b.produit] || PRODUITS[b.produit].type === "colle") b.produit = premierProduit();
   majSelects();
+  { const f = colleChoisie(reg).indexFiche; $("colleFiche").innerHTML = f ? ficheLien(f) : ""; }
   { const pr = PRODUITS[b.produit] ?? {}, bouts = [];
-    if (pr.sd) bouts.push(`<span class="hint-sd" title="Résistance à la diffusion de vapeur d'eau : plus c'est haut, plus la membrane freine la vapeur">sd ≈ ${fmt(pr.sd, pr.sd % 1 ? 1 : 0)} m</span>`);
-    if (pr.autocollant) bouts.push("autocollante : pas de colle");
+    if (pr.sd) bouts.push(`<span class="hint-sd" title="Résistance à la diffusion de vapeur d'eau : plus c'est haut, plus la membrane freine la vapeur">sd ≈ ${sdTexte(pr.sd)} m</span>`);
+    if (pr.autocollant === true) bouts.push("autocollante : pas de colle");
+    else if (pr.autocollant === "face") bouts.push("une face autocollante : un cordon de colle en moins");
     if (pr.indexFiche) bouts.push(ficheLien(pr.indexFiche));
     $("produitFiche").innerHTML = bouts.join(" · "); }
   $("mesure").querySelectorAll("button").forEach((x) => { const on = (x.dataset.k === "mes") === b.mesure; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
@@ -225,7 +228,7 @@ function maj() {
   $("rRoul").textContent = String(roul); $("rRoulL").textContent = `${pluriel(roul, "rouleau", "rouleaux")} de ${r.roll.largeur} mm${r.roll.mesure ? " (sur mesure)" : r.roll.surDemande ? " (sur demande)" : ""}`;
   $("rWhy").textContent = `Bande dépliée : ${fmt(r.dev, 0)} mm, donc ${r.roll.mesure ? "coupée à " : "rouleau de "}${r.roll.largeur} mm en ${p.court}. `
     + `Longueur : ${fmt(r.run, 2)} m${g.marge ? ` + marge ${fmt(g.marge * 100, 0)} %` : ""}${g.recouvrement ? ` + recouvrement ${fmt(g.recouvrement * 100, 0)} cm` : ""} = ${fmt(r.longueur, 2)} m. `
-    + (r.auto ? "Membrane autocollante : pas de colle à prévoir." : `Colle : ${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} × ${fmt(r.longueur, 2)} m = ${fmt(r.cordonM, 1)} m, à ${fmt(g.cartouche, g.cartouche % 1 ? 1 : 0)} m par cartouche de ${g.colle.ml} ml.`);
+    + (r.auto === true ? "Membrane autocollante : pas de colle à prévoir." : `${r.auto === "face" ? "Une face autocollante : un cordon de colle en moins. " : ""}Colle : ${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} × ${fmt(r.longueur, 2)} m = ${fmt(r.cordonM, 1)} m, à ${fmt(g.cartouche, g.cartouche % 1 ? 1 : 0)} m par cartouche de ${g.colle.ml} ml.`);
   $("rAlertes").innerHTML = r.alertes.map((a) => `<p>${esc(a)}</p>`).join("");
   $("ajouter").disabled = false;
   $("ajouter").textContent = edition ? "Mettre à jour la ligne" : "Ajouter à la commande";
@@ -242,7 +245,7 @@ function afficherCommande() {
   const c = commande(lignes, reg);
   $("cmdLignes").innerHTML = c.facades.map((g) => `<div class="fh">${g.facade ? "Façade " + esc(g.facade) : "Sans façade"}</div>
     <div class="tscroll"><table class="tbl"><thead><tr><th>Étage</th><th>Plan</th><th>Membrane</th><th class="num">Longueur</th><th class="num">Colle</th><th></th></tr></thead><tbody>${
-      g.lignes.map(({ ligne: l, r }) => `<tr${edition === l.id ? ' class="edit"' : ""}><td>${esc(l.etage) || "—"}</td><td>${esc(l.plan) || "—"}</td><td>${esc(nomProduit(l, r))}</td><td class="num">${deuxPoints(r.run)} m</td><td class="num">${r.auto ? "autocollante" : `${r.nCollés} × ${fmt(r.longueur, 2)} m`}</td><td class="act"><button type="button" data-a="edit" data-id="${l.id}">Modifier</button><button type="button" data-a="del" data-id="${l.id}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`).join("");
+      g.lignes.map(({ ligne: l, r }) => `<tr${edition === l.id ? ' class="edit"' : ""}><td>${esc(l.etage) || "—"}</td><td>${esc(l.plan) || "—"}</td><td>${esc(nomProduit(l, r))}</td><td class="num">${deuxPoints(r.run)} m</td><td class="num">${r.auto === true ? "autocollante" : `${r.nCollés} × ${fmt(r.longueur, 2)} m`}</td><td class="act"><button type="button" data-a="edit" data-id="${l.id}">Modifier</button><button type="button" data-a="del" data-id="${l.id}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`).join("");
   $("cmdTotal").innerHTML = `<div class="tscroll"><table class="tbl"><thead><tr><th>Article</th><th class="num">Quantité</th><th>Détail</th></tr></thead><tbody>${
     c.articles.map((a) => `<tr><td>${esc(libelleProduit(a.produit))}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m</td><td class="num"><b>${a.rouleaux}</b></td><td>${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m</td></tr>`).join("")
   }${c.cartouches ? `<tr><td>${esc(libelleItem(c.colle))}, ${c.colle.ml} ml</td><td class="num"><b>${c.cartouches}</b></td><td>${deuxPoints(c.cordonM)} m de cordon, à ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m par cartouche (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${c.colle.parCarton})</td></tr>` : ""}</tbody></table></div>`;
@@ -359,7 +362,7 @@ async function exportPdf() {
     doc.autoTable({
       startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain", styles: style, headStyles: head,
       head: [["Étage", "Plan", "Membrane", "Longueur", "Colle"]],
-      body: g.lignes.map(({ ligne: l, r }) => [l.etage || "-", l.plan || "-", nomProduit(l, r), `${deuxPoints(r.run)} m`, r.auto ? "autocollante" : `${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} x ${fmt(r.longueur, 2)} m`].map(pdfText)),
+      body: g.lignes.map(({ ligne: l, r }) => [l.etage || "-", l.plan || "-", nomProduit(l, r), `${deuxPoints(r.run)} m`, r.auto === true ? "autocollante" : `${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} x ${fmt(r.longueur, 2)} m`].map(pdfText)),
       columnStyles: { 3: { halign: "right" }, 4: { halign: "right" } },
     });
     y = doc.lastAutoTable.finalY + 6;
@@ -531,7 +534,7 @@ const mmListe = (l) => l.join(", ");
 const lireMm = (txt) => String(txt).split(/[\s,;]+/).filter(Boolean).map((x) => nombre(x));
 const ETATS = { shared: ["Partagé avec l'équipe", "ok"], modified: ["Modifié ici, pas encore envoyé", "warn"], local: ["Sur ce poste seulement", ""] };
 let biblioEdit = null; // id du produit en cours de modification ("" = nouveau)
-let ficheForm = null, fichePicking = false; // fiche Index choisie dans le formulaire
+const fiF = { p: { box: "bFiche", val: null, picking: false }, c: { box: "cFiche", val: null, picking: false } }; // fiche Index choisie dans chaque formulaire (produit, colle)
 function afficherBiblio() {
   const mem = produitsMembrane(), col = colles(), connecte = !!lireSession();
   $("biblioSub").textContent = `${mem.length} produit${mem.length > 1 ? "s" : ""}, ${col.length} colle${col.length > 1 ? "s" : ""}`;
@@ -548,20 +551,20 @@ function afficherBiblio() {
     const chips = p.largeurs.map((w) => `<span class="chip${p.surDemande.includes(w) ? " dem" : ""}" title="${p.surDemande.includes(w) ? "Sur demande" : "En stock"}">${w}${p.surDemande.includes(w) ? "*" : ""}</span>`).join("");
     return `<div class="prod">${entete(k, p, etat)}
       <div class="chips">${chips}</div>
-      <div class="pm">Largeurs en mm${p.surDemande.length ? " (* sur demande)" : ""} · rouleaux de ${fmt(p.rouleauM, p.rouleauM % 1 ? 1 : 0)} m${p.sd ? ` · sd ≈ ${fmt(p.sd, p.sd % 1 ? 1 : 0)} m` : ""}${p.autocollant ? " · autocollante" : ""}${p.indexFiche ? ` · ${ficheLien(p.indexFiche)}` : ""}</div>
+      <div class="pm">Largeurs en mm${p.surDemande.length ? " (* sur demande)" : ""} · rouleaux de ${fmt(p.rouleauM, p.rouleauM % 1 ? 1 : 0)} m${p.sd ? ` · sd ≈ ${sdTexte(p.sd)} m` : ""}${p.autocollant === true ? " · autocollante" : p.autocollant === "face" ? " · une face autocollante" : ""}${p.indexFiche ? ` · ${ficheLien(p.indexFiche)}` : ""}</div>
       <div class="pa">${boutonsDe(k, etat)}</div></div>`;
   }).join("");
   $("biblioColles").innerHTML = col.map((p) => {
     const k = p.id, etat = sharedStatus(itemAvecId(k), base), m = (v) => fmt(v, v % 1 ? 1 : 0);
     return `<div class="prod colle">${entete(k, p, etat)}
-      <div class="pm">Cartouche de ${m(p.ml)} ml · couvre ${m(p.metres)} m${p.metresMin ? ` (${m(p.metresMin)} m au plus défavorable)` : ""} · cordon de ${m(p.cordonMm)} mm · ${p.parCarton} par carton${p.id === colleChoisie(reg).id ? " · <b>utilisée pour la commande</b>" : ""}</div>
+      <div class="pm">Cartouche de ${m(p.ml)} ml · couvre ${m(p.metres)} m${p.metresMin ? ` (${m(p.metresMin)} m au plus défavorable)` : ""} · cordon de ${m(p.cordonMm)} mm · ${p.parCarton} par carton${p.indexFiche ? ` · ${ficheLien(p.indexFiche)}` : ""}${p.id === colleChoisie(reg).id ? " · <b>utilisée pour la commande</b>" : ""}</div>
       <div class="pa">${boutonsDe(k, etat)}</div></div>`;
   }).join("");
 }
-function afficherFicheForm() {
-  const box = $("bFiche");
-  if (ficheForm) { box.innerHTML = `${ficheLien(ficheForm)} <button type="button" class="linkbtn" data-fiche="remove">Retirer</button>`; return; }
-  if (!fichePicking) { box.innerHTML = `<button type="button" class="linkbtn" data-fiche="pick">Lier une fiche Index</button>`; return; }
+function afficherFicheForm(k = "p") {
+  const st = fiF[k], box = $(st.box);
+  if (st.val) { box.innerHTML = `${ficheLien(st.val)} <button type="button" class="linkbtn" data-fiche="remove">Retirer</button>`; return; }
+  if (!st.picking) { box.innerHTML = `<button type="button" class="linkbtn" data-fiche="pick">Lier une fiche Index</button>`; return; }
   box.innerHTML = `<div class="fiche-pick"><input id="ficheSearch" type="text" placeholder="Rechercher dans Index…" aria-label="Rechercher une fiche dans Index" autocomplete="off"><div id="ficheResults" class="hint">Chargement…</div></div>`;
   const input = $("ficheSearch");
   const montrer = () => chargerFiches().then((liste) => {
@@ -570,17 +573,17 @@ function afficherFicheForm() {
   }, () => { $("ficheResults").textContent = "Index injoignable pour le moment."; });
   input.addEventListener("input", montrer);
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { e.stopPropagation(); fichePicking = false; afficherFicheForm(); }
+    if (e.key === "Escape") { e.stopPropagation(); st.picking = false; afficherFicheForm(k); }
     if (e.key === "Enter") { e.preventDefault(); $("ficheResults").querySelector("[data-fiche-id]")?.click(); }
   });
   input.focus(); montrer();
 }
-$("bFiche").addEventListener("click", (e) => {
-  const x = e.target.closest("[data-fiche], [data-fiche-id]"); if (!x) return;
-  if (x.dataset.fiche === "pick") fichePicking = true;
-  else if (x.dataset.fiche === "remove") ficheForm = null;
-  else if (x.dataset.ficheId) { ficheForm = { id: x.dataset.ficheId, name: x.dataset.ficheName }; fichePicking = false; }
-  afficherFicheForm();
+for (const k of ["p", "c"]) $(fiF[k].box).addEventListener("click", (e) => {
+  const x = e.target.closest("[data-fiche], [data-fiche-id]"), st = fiF[k]; if (!x) return;
+  if (x.dataset.fiche === "pick") st.picking = true;
+  else if (x.dataset.fiche === "remove") st.val = null;
+  else if (x.dataset.ficheId) { st.val = { id: x.dataset.ficheId, name: x.dataset.ficheName }; st.picking = false; }
+  afficherFicheForm(k);
 });
 function ouvrirForm(k) {
   biblioEdit = k;
@@ -588,9 +591,9 @@ function ouvrirForm(k) {
   $("biblioTitre").textContent = p ? `Modifier « ${p.nom} »` : "Nouveau produit";
   $("bNom").value = p?.nom ?? ""; $("bFour").value = p?.fournisseur ?? ""; $("bRole").value = p?.role ?? "";
   $("bLong").value = p ? String(p.rouleauM).replace(".", ",") : "25";
-  $("bSd").value = p?.sd ? String(p.sd).replace(".", ",") : ""; $("bAuto").checked = !!p?.autocollant;
+  $("bSd").value = p?.sd ? (typeof p.sd === "number" ? String(p.sd).replace(".", ",") : p.sd) : ""; $("bAuto").value = p?.autocollant === true ? "tout" : p?.autocollant === "face" ? "face" : "";
   $("bLarg").value = p ? mmListe(p.largeurs.filter((w) => !p.surDemande.includes(w))) : ""; $("bDem").value = p ? mmListe(p.surDemande) : "";
-  ficheForm = p?.indexFiche ?? null; fichePicking = false; afficherFicheForm();
+  fiF.p.val = p?.indexFiche ?? null; fiF.p.picking = false; afficherFicheForm("p");
   $("biblioErr").textContent = ""; $("biblioForm").classList.remove("hidden");
   $("bNom").focus();
 }
@@ -606,11 +609,11 @@ $("biblioForm").addEventListener("submit", (e) => {
     : [...std, ...dem].some((n) => !(n > 0)) ? "Les largeurs sont des nombres en mm, séparés par des virgules."
     : !std.length && !dem.length ? "Indique au moins une largeur."
     : !(long > 0) ? "La longueur d'un rouleau est un nombre en m."
-    : $("bSd").value.trim() && !(nombre($("bSd").value) > 0) ? "La valeur sd est un nombre en m (ou laisse vide)."
+    : lireSd($("bSd").value) === undefined ? "La valeur sd est un nombre en m, ou deux nombres (ex. 0,5 à 20), ou laisse vide."
     : Object.entries(PRODUITS).some(([k, p]) => k !== biblioEdit && p.nom.toLowerCase() === nom.toLowerCase()) ? "Un produit porte déjà ce nom." : "";
   if (err) { $("biblioErr").innerHTML = `<p>${esc(err)}</p>`; return; }
   const id = biblioEdit || `p${Date.now().toString(36)}`;
-  const produit = { nom, court: nom, fournisseur: $("bFour").value, role: $("bRole").value, largeurs: [...std, ...dem], surDemande: dem, rouleauM: long, ...($("bSd").value.trim() ? { sd: nombre($("bSd").value) } : {}), ...($("bAuto").checked ? { autocollant: true } : {}), ...(ficheForm ? { indexFiche: ficheForm } : {}) };
+  const produit = { nom, court: nom, fournisseur: $("bFour").value, role: $("bRole").value, largeurs: [...std, ...dem], surDemande: dem, rouleauM: long, ...(lireSd($("bSd").value) !== null ? { sd: lireSd($("bSd").value) } : {}), ...($("bAuto").value === "tout" ? { autocollant: true } : $("bAuto").value === "face" ? { autocollant: "face" } : {}), ...(fiF.p.val ? { indexFiche: fiF.p.val } : {}) };
   chargerCatalogue({ ...PRODUITS, [id]: produit }); sauverCatalogue(); fermerForm(); afficherBiblio(); maj(); afficherCommande();
   toast(biblioEdit ? "Produit modifié" : "Produit ajouté : envoie-le à l'équipe pour le partager");
 });
@@ -648,6 +651,7 @@ function ouvrirColleForm(k) {
   $("cMl").value = p ? virg(p.ml) : "600"; $("cCarton").value = p ? String(p.parCarton) : "20";
   $("cMetres").value = p ? virg(p.metres) : "10"; $("cMin").value = p?.metresMin ? virg(p.metresMin) : "";
   $("cCordon").value = p ? virg(p.cordonMm) : "45";
+  fiF.c.val = p?.indexFiche ?? null; fiF.c.picking = false; afficherFicheForm("c");
   $("colleErr").textContent = ""; $("colleForm").classList.remove("hidden"); $("cNom").focus();
 }
 const fermerColleForm = () => { colleEdit = null; $("colleForm").classList.add("hidden"); };
@@ -666,7 +670,7 @@ $("colleForm").addEventListener("submit", (e) => {
     : Object.entries(PRODUITS).some(([k, p]) => k !== colleEdit && p.nom.toLowerCase() === nom.toLowerCase()) ? "Un produit ou une colle porte déjà ce nom." : "";
   if (err) { $("colleErr").innerHTML = `<p>${esc(err)}</p>`; return; }
   const id = colleEdit || `c${Date.now().toString(36)}`;
-  const colle = { type: "colle", nom, court: nom, fournisseur: $("cFour").value, ml, parCarton: Math.round(carton), metres, ...(min ? { metresMin: min } : {}), cordonMm: cordon, ...(PRODUITS[id]?.indexFiche ? { indexFiche: PRODUITS[id].indexFiche } : {}) };
+  const colle = { type: "colle", nom, court: nom, fournisseur: $("cFour").value, ml, parCarton: Math.round(carton), metres, ...(min ? { metresMin: min } : {}), cordonMm: cordon, ...(fiF.c.val ? { indexFiche: fiF.c.val } : {}) };
   chargerCatalogue({ ...PRODUITS, [id]: colle }); sauverCatalogue(); fermerColleForm(); afficherBiblio(); maj(); afficherCommande();
   toast(colleEdit ? "Colle modifiée" : "Colle ajoutée : envoie-la à l'équipe pour la partager");
 });
