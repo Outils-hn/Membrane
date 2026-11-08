@@ -181,3 +181,18 @@ test("catalogue commun : fusion (nouveau, mis a jour, modifie ici, retire, jamai
   chargerListe(r1.items); assert.deepEqual(Object.keys(PRODUITS), ["a", "c", "b"]); assert.equal(produitsEnListe()[0].id, "a");
   chargerCatalogue(null);
 });
+
+test("Universal SB : autocollante, pas de colle ; sd gardee dans la bibliotheque", () => {
+  assert.equal(PRODUITS_DEFAUT.unisb.autocollant, true);
+  assert.equal(PRODUITS_DEFAUT.uni.sd, 60);
+  chargerCatalogue(structuredClone(PRODUITS_DEFAUT));
+  const r = calculBande(z({ produit: "unisb" }));
+  assert.equal(r.auto, true); assert.equal(r.nCollés, 0); assert.equal(r.cordonM, 0); assert.equal(r.cartouches, 0);
+  assert.equal(r.alertes.length, 0);
+  const c = commande([z({ produit: "unisb" })]);
+  assert.equal(c.cartouches, 0); assert.equal(c.articles.length, 1);
+  assert.equal(calculBande(z()).nCollés, 2);
+  const n = nettoyerProduit({ nom: "X", largeurs: [100], sd: "abc", autocollant: "oui" });
+  assert.equal(n.sd, undefined); assert.equal(n.autocollant, undefined);
+  assert.deepEqual([nettoyerProduit({ nom: "X", largeurs: [100], sd: 12.5, autocollant: true })].map((p) => [p.sd, p.autocollant]), [[12.5, true]]);
+});

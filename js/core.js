@@ -4,8 +4,9 @@
 
 /** Produits proposes. Largeurs de rouleau standard en mm (fiches Sika), rouleaux de 25 m. « surDemande » : largeur disponible seulement sur demande. */
 export const PRODUITS_DEFAUT = {
-  outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", fournisseur: "Sika", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400], rouleauM: 25 },
-  uni: { nom: "SikaMembran Universal", court: "Universal", fournisseur: "Sika", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400], rouleauM: 25 },
+  outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", fournisseur: "Sika", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400], rouleauM: 25, sd: 4 },
+  uni: { nom: "SikaMembran Universal", court: "Universal", fournisseur: "Sika", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400], rouleauM: 25, sd: 60 },
+  unisb: { nom: "SikaMembran Universal SB", court: "Universal SB", fournisseur: "Sika", role: "autocollante", largeurs: [100, 150, 200, 250, 350], surDemande: [250, 350], rouleauM: 25, sd: 60, autocollant: true },
 };
 
 /** La bibliotheque en cours (modifiable : produits d'autres fournisseurs). Remplie par chargerCatalogue. */
@@ -30,6 +31,10 @@ export function nettoyerProduit(p) {
   };
   // Lien vers la fiche technique dans Index (id + nom de la fiche)
   if (f && typeof f.id === "string" && f.id && typeof f.name === "string") r.indexFiche = { id: f.id, name: f.name };
+  // Valeur sd (m, resistance a la vapeur d'eau, pour info) et membrane autocollante (pas de colle a compter)
+  const sdv = Number(p.sd);
+  if (Number.isFinite(sdv) && sdv > 0) r.sd = sdv;
+  if (p.autocollant === true) r.autocollant = true;
   return r;
 }
 
@@ -149,17 +154,19 @@ export function calculBande(b, reg = {}) {
   const alertes = [];
   if (!(run > 0)) return null;
   const roll = largeurRouleau(b.produit, dev, !!b.mesure);
-  const collés = segs.map((s, i) => ({ s, i })).filter(({ s }) => s.on && pos(s.len) > 0);
+  // Membrane autocollante : pas de colle a compter, meme si des troncons sont marques « colles »
+  const auto = !!PRODUITS[b.produit]?.autocollant;
+  const collés = auto ? [] : segs.map((s, i) => ({ s, i })).filter(({ s }) => s.on && pos(s.len) > 0);
   if (roll?.depasse) alertes.push(`La bande (${fmt(dev, 0)} mm) dépasse le plus grand rouleau de ce produit (${roll.largeur} mm).`);
-  if (!collés.length) alertes.push("Aucun tronçon n'est collé : pas de colle à prévoir.");
+  if (!collés.length && !auto) alertes.push("Aucun tronçon n'est collé : pas de colle à prévoir.");
   for (const { s, i } of collés) if (pos(s.len) < cw) alertes.push(`Le tronçon ${i + 1} (${fmt(pos(s.len), 0)} mm) est plus court que le cordon de colle (${fmt(cw, 0)} mm).`);
   const L = longueurRouleau(b.produit);
   const pc = piecesBande(run, g.marge, g.recouvrement, L);
   return {
-    dev, roll, run, cw, rouleauM: L, nCollés: collés.length,
+    dev, roll, run, cw, auto, rouleauM: L, nCollés: collés.length,
     longueur: pc.total, pieces: pc.pieces,
     cordonM: collés.length * pc.total,
-    cartouches: Math.ceil((collés.length * pc.total) / g.cartouche - 1e-9),
+    cartouches: Math.ceil((collés.length * pc.total) / g.cartouche - 1e-9) || 0,
     rouleaux: Math.ceil(pc.total / L - 1e-9),
     alertes,
   };
@@ -213,7 +220,7 @@ export function commande(lignes, reg = {}) {
     const rouleaux = rangerRouleaux(e.pieces, e.rouleauM);
     return { ...e, rouleaux: rouleaux.length, chutes: rouleaux.length * e.rouleauM - e.metres, recouvrement: e.metres - e.net };
   }).sort((a, b) => ordre.indexOf(a.produit) - ordre.indexOf(b.produit) || a.largeur - b.largeur);
-  const cartouches = Math.ceil(cordonM / g.cartouche - 1e-9);
+  const cartouches = Math.ceil(cordonM / g.cartouche - 1e-9) || 0;
   // Facades triees (sans facade a la fin), etages par rang puis ordre naturel
   const groupes = new Map();
   for (const c of calculees) { const f = c.ligne.facade?.trim() ?? ""; if (!groupes.has(f)) groupes.set(f, []); groupes.get(f).push(c); }

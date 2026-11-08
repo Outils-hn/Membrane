@@ -61,9 +61,14 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   verif("Explication du calcul", /Bande dépliée : 220 mm.*2 cordons × 12,05 m = 24,1 m.*10 m par cartouche/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   verif("Dessin : 3 troncons cliquables, 2 cordons de colle", (await page.locator("#dessin .hit").count()) === 3 && (await page.locator("#dessin .glue").count()) === 2);
   await page.locator("#produitSel .sel-btn").click();
-  verif("Les produits sont proposes (2), avec leur role", (await page.locator("#produitSel .sel-pop button").count()) === 2 && /pare-pluie/.test(await txt(page, "#produitSel .sel-pop")), await txt(page, "#produitSel .sel-pop"));
+  verif("Les produits sont proposes (3), avec leur role", (await page.locator("#produitSel .sel-pop button").count()) === 3 && /pare-pluie/.test(await txt(page, "#produitSel .sel-pop")), await txt(page, "#produitSel .sel-pop"));
   await page.keyboard.press("Escape");
   verif("Echap ferme la liste", await page.locator("#produitSel .sel-pop").evaluate((el) => el.classList.contains("hidden")));
+  await choisir(page, "#produitSel", "unisb");
+  verif("Universal SB : sd en petit et « autocollante : pas de colle »", /sd ≈ 60 m/.test(await txt(page, "#produitFiche")) && /autocollante/.test(await txt(page, "#produitFiche")), await txt(page, "#produitFiche"));
+  verif("Universal SB : aucune colle (0 cartouche), pas de cordon dessine", (await txt(page, "#rCart")) === "0" && (await page.locator("#dessin .glue").count()) === 0 && /autocollante : pas de colle/.test(await txt(page, "#rWhy")), `${await txt(page, "#rCart")} / ${await txt(page, "#rWhy")}`);
+  await choisir(page, "#produitSel", "outplus");
+  verif("Retour a Outdoor plus : sd 4 m, colle de nouveau comptee", /sd ≈ 4 m/.test(await txt(page, "#produitFiche")) && (await txt(page, "#rCart")) === "3", await txt(page, "#produitFiche"));
   verif("Pas de lignes tant qu'on n'a rien ajoute (le message d'attente est visible)", await page.locator("#cmdPlein").evaluate((el) => el.classList.contains("hidden")) && await page.locator("#cmdVide").isVisible());
   await page.screenshot({ path: `${OUT}/01-depart.png`, fullPage: true });
   await c.close();
@@ -141,7 +146,7 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Sans compte : « Lecture seule »", (await txt(page, "#etatCompte")) === "Lecture seule");
   await page.click("#voirBiblio");
   verif("Le lien ouvre la bibliotheque", await page.locator("#biblio").evaluate((d) => d.open));
-  verif("2 produits Sika, partages avec l'equipe, avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 2 && (await page.locator("#biblioListe .st.ok").count()) === 2 && /1400\*/.test(await txt(page, "#biblioListe")) && /rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  verif("3 produits Sika, partages avec l'equipe, avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 3 && (await page.locator("#biblioListe .st.ok").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")) && /rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
   await page.waitForFunction(() => /à jour/.test(document.getElementById("biblioEtat").textContent), null, { timeout: 4000 }).catch(() => {});
   verif("Etat du catalogue commun : a jour", /Catalogue commun à jour/.test(await txt(page, "#biblioEtat")), await txt(page, "#biblioEtat"));
   await page.click("#biblioNouveau");
@@ -158,9 +163,9 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   await page.click("#ficheResults [data-fiche-id]");
   verif("Fiche Index liee dans le formulaire", /Isover Vario Xtra : fiche technique/.test(await txt(page, "#bFiche")), await txt(page, "#bFiche"));
   await page.click("#biblioForm button[type=submit]");
-  verif("Produit ajoute : sur ce poste seulement, avec le lien vers sa fiche", (await page.locator("#biblioListe .prod").count()) === 3 && /Sur ce poste seulement/.test(await txt(page, "#biblioListe")) && (await page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1, await txt(page, "#biblioListe"));
+  verif("Produit ajoute : sur ce poste seulement, avec le lien vers sa fiche", (await page.locator("#biblioListe .prod").count()) === 4 && /Sur ce poste seulement/.test(await txt(page, "#biblioListe")) && (await page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1, await txt(page, "#biblioListe"));
   await page.locator("#produitSel .sel-btn").click();
-  verif("Il apparait dans la liste du produit utilise", (await page.locator("#produitSel .sel-pop button").count()) === 3);
+  verif("Il apparait dans la liste du produit utilise", (await page.locator("#produitSel .sel-pop button").count()) === 4);
   await page.locator('#produitSel .sel-pop button:has-text("Isover")').click();
   verif("La fiche technique est proposee sous le produit", (await page.locator('#produitFiche a[href$="?fiche=f2"]').count()) === 1, await txt(page, "#produitFiche"));
   await page.locator("#segs .row:nth-child(1) input").fill("900"); await page.locator("#segs .row:nth-child(2) input").fill("0"); await page.locator("#segs .row:nth-child(3) input").fill("0");
@@ -175,29 +180,29 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Connexion : champs obligatoires", /email et le mot de passe/.test(await txt(page, "#cErreur")), await txt(page, "#cErreur"));
   await page.fill("#cEmail", "hugo@test.fr"); await page.fill("#cMdp", "secret");
   await page.click("#cOk"); await page.waitForTimeout(500);
-  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 3 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
+  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 4 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
   verif("Le produit envoye garde sa fiche et son rouleau de 50 m", Object.values(equipe).some((e) => e.data.indexFiche?.id === "f2" && e.data.rouleauM === 50));
-  verif("Le produit est maintenant « partage avec l'equipe »", (await page.locator("#biblioListe .st.ok").count()) === 3, await txt(page, "#biblioListe"));
+  verif("Le produit est maintenant « partage avec l'equipe »", (await page.locator("#biblioListe .st.ok").count()) === 4, await txt(page, "#biblioListe"));
   // Un collegue (autre poste) recoit le produit
   const autre = await ouvrir();
-  verif("Autre poste : le produit de l'equipe est la, partage, avec sa fiche", (await autre.page.locator('#produitSel .sel-btn').count()) === 1 && await (async () => { await autre.page.click("#voirBiblio"); return (await autre.page.locator("#biblioListe .prod").count()) === 3 && (await autre.page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1; })());
+  verif("Autre poste : le produit de l'equipe est la, partage, avec sa fiche", (await autre.page.locator('#produitSel .sel-btn').count()) === 1 && await (async () => { await autre.page.click("#voirBiblio"); return (await autre.page.locator("#biblioListe .prod").count()) === 4 && (await autre.page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1; })());
   await autre.c.close();
   // Modifier un produit partage : « modifie ici », puis annuler mes modifications
-  await page.locator('#biblioListe .prod:has-text("Universal") button[data-a="edit"]').click();
+  await page.locator('#biblioListe .prod:has(b:text-is("SikaMembran Universal")) button[data-a="edit"]').click();
   await page.fill("#bDem", ""); await page.click("#biblioForm button[type=submit]");
-  const uni = await txt(page, '#biblioListe .prod:has-text("Universal")');
+  const uni = await txt(page, '#biblioListe .prod:has(b:text-is("SikaMembran Universal"))');
   verif("Modifier un produit partage : « Modifié ici » et plus de 1400", /Modifié ici/.test(uni) && !/1400/.test(uni) && /Annuler mes modifications/.test(uni) && /Envoyer à l'équipe/.test(uni), uni);
-  await page.locator('#biblioListe .prod:has-text("Universal") button[data-a="revert"]').click();
-  verif("Annuler mes modifications : version de l'equipe retablie", /1400\*/.test(await txt(page, '#biblioListe .prod:has-text("Universal")')) && /Partagé avec l'équipe/.test(await txt(page, '#biblioListe .prod:has-text("Universal")')));
+  await page.locator('#biblioListe .prod:has(b:text-is("SikaMembran Universal")) button[data-a="revert"]').click();
+  verif("Annuler mes modifications : version de l'equipe retablie", /1400\*/.test(await txt(page, '#biblioListe .prod:has(b:text-is("SikaMembran Universal"))')) && /Partagé avec l'équipe/.test(await txt(page, '#biblioListe .prod:has(b:text-is("SikaMembran Universal"))')));
   await page.reload(); await page.waitForTimeout(400); await page.click("#voirBiblio");
-  verif("Apres rechargement : 3 produits, tous partages, connexion gardee", (await page.locator("#biblioListe .prod").count()) === 3 && (await page.locator("#biblioListe .st.ok").count()) === 3 && (await txt(page, "#etatCompte")) === "hugo@test.fr");
+  verif("Apres rechargement : 4 produits, tous partages, connexion gardee", (await page.locator("#biblioListe .prod").count()) === 4 && (await page.locator("#biblioListe .st.ok").count()) === 4 && (await txt(page, "#etatCompte")) === "hugo@test.fr");
   const supp = page.locator('#biblioListe .prod:has-text("Isover") button[data-a="del"]');
   await supp.click();
-  verif("Produit utilise dans la commande : suppression refusee", (await page.locator("#biblioListe .prod").count()) === 3 && /utilisé dans la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
+  verif("Produit utilise dans la commande : suppression refusee", (await page.locator("#biblioListe .prod").count()) === 4 && /utilisé dans la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
   await page.locator("#cmdLignes button[data-a='del']").first().click();
   verif("Produit partage : le bouton dit « Retirer pour l'equipe »", /Retirer pour l'équipe/.test(await txt(page, '#biblioListe .prod:has-text("Isover") .pa')));
   await supp.click(); await supp.click(); await page.waitForTimeout(300);
-  verif("Retire pour l'equipe : disparait ici et chez l'equipe", (await page.locator("#biblioListe .prod").count()) === 2 && Object.values(equipe).some((e) => e.data.nom === "Isover Vario Xtra" && e.deleted_at), await txt(page, "#biblioListe"));
+  verif("Retire pour l'equipe : disparait ici et chez l'equipe", (await page.locator("#biblioListe .prod").count()) === 3 && Object.values(equipe).some((e) => e.data.nom === "Isover Vario Xtra" && e.deleted_at), await txt(page, "#biblioListe"));
   await page.click("#compteBtn");
   verif("Se deconnecter : retour en lecture seule", (await txt(page, "#etatCompte")) === "Lecture seule");
   await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true });
@@ -271,7 +276,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.7", /Membrane v1\.7/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.8", /Membrane v1\.8/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
