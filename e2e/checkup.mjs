@@ -67,8 +67,10 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   await choisir(page, "#produitSel", "unisb");
   verif("Universal SB : sd en petit et « autocollante : pas de colle »", /sd ≈ 60 m/.test(await txt(page, "#produitFiche")) && /autocollante/.test(await txt(page, "#produitFiche")), await txt(page, "#produitFiche"));
   verif("Universal SB (une face autocollante) : 1 cordon de moins (1 seul cordon dessine, 2 cartouches)", (await txt(page, "#rCart")) === "2" && (await page.locator("#dessin .glue").count()) === 1 && /Une face autocollante : un cordon de colle en moins\. Colle : 1 cordon/.test(await txt(page, "#rWhy")), `${await txt(page, "#rCart")} / ${await txt(page, "#rWhy")}`);
+  verif("Universal SB : le tronçon tenu par l'autocollant est en pointillé bleu, bouton « Collé · autocollant »", (await page.locator("#dessin .auto").count()) === 1 && /Collé · autocollant/.test(await txt(page, "#segs")), `${await page.locator("#dessin .auto").count()} / ${await txt(page, "#segs")}`);
   await choisir(page, "#produitSel", "acfsb");
   verif("Active FSB+ (toute la surface autocollante) : aucune colle, sd en plage", (await txt(page, "#rCart")) === "0" && (await page.locator("#dessin .glue").count()) === 0 && /sd ≈ 0,5 à 20 m/.test(await txt(page, "#produitFiche")) && /pas de colle/.test(await txt(page, "#rWhy")), `${await txt(page, "#rCart")} / ${await txt(page, "#produitFiche")}`);
+  verif("Active FSB+ : tous les tronçons collés sont en pointillé bleu", (await page.locator("#dessin .auto").count()) === 2, `${await page.locator("#dessin .auto").count()}`);
   await choisir(page, "#produitSel", "acplus");
   verif("Active+ (rien d'autocollant) : colle comptee comme Outdoor plus, sd en plage", (await txt(page, "#rCart")) === "3" && /0,5 à 20/.test(await txt(page, "#produitFiche")), `${await txt(page, "#rCart")} / ${await txt(page, "#produitFiche")}`);
   await choisir(page, "#produitSel", "outplus");
@@ -306,7 +308,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.11", /Membrane v1\.11/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.12", /Membrane v1\.12/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");

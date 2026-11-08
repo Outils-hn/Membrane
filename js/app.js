@@ -129,6 +129,21 @@ $("mesure").innerHTML = `<button type="button" role="radio" data-k="std">Standar
 $("mesure").addEventListener("click", (e) => { const x = e.target.closest("button[data-k]"); if (x) { b.mesure = x.dataset.k === "mes"; maj(); } });
 
 // ---------- Troncons ----------
+// Troncon « tenu par l'adhesif » : marque colle mais sans cordon (produit autocollant, ou 1re face d'une membrane a une face autocollante)
+function tenuParAdhesif(i) {
+  const au = PRODUITS[b.produit]?.autocollant ?? false, s = b.segs[i];
+  if (!s?.on || (nombre(s.len) || 0) <= 0 || !au) return false;
+  return au === true || i === b.segs.findIndex((x) => x.on && (nombre(x.len) || 0) > 0);
+}
+function etiquettesTroncons() {
+  document.querySelectorAll("#segs .row").forEach((row) => {
+    const btn = row.querySelector(".tg"), i = Number(row.dataset.i), s = b.segs[i];
+    if (!btn || !s) return;
+    const auto = tenuParAdhesif(i);
+    btn.textContent = s.on ? (auto ? "Collé · autocollant" : "Collé") : "Libre";
+    btn.classList.toggle("auto", auto);
+  });
+}
 function lignesTroncons() {
   $("segs").innerHTML = b.segs.map((s, i) => `<div class="row" data-i="${i}">
     <span class="n">${i + 1}</span>
@@ -171,16 +186,17 @@ function dessiner() {
   const cw = Math.max(reglages(reg).cordon, 1);
   const f = (v) => v.toFixed(1);
   let glue = "", mem = "", hit = "", txt = "";
-  const au = PRODUITS[b.produit]?.autocollant ?? false, premier = b.segs.findIndex((s) => s.on && (nombre(s.len) || 0) > 0);
   b.segs.forEach((s, i) => {
     const a = P(pts[i]), c = P(pts[i + 1]), d = dir(s.dir), l = nombre(s.len) || 0;
     mem += `<polyline class="mem" points="${f(a[0])},${f(a[1])} ${f(c[0])},${f(c[1])}"/>`;
-    if (s.on && l > 0 && au !== true && !(au === "face" && i === premier)) {
+    if (s.on && l > 0 && tenuParAdhesif(i)) {
+      mem += `<polyline class="auto" points="${f(a[0])},${f(a[1])} ${f(c[0])},${f(c[1])}"/>`;
+    } else if (s.on && l > 0) {
       const [t0, t1] = positionCordon(i, b.segs.length, l, cw);
       const g0 = [a[0] + (c[0] - a[0]) * t0, a[1] + (c[1] - a[1]) * t0], g1 = [a[0] + (c[0] - a[0]) * t1, a[1] + (c[1] - a[1]) * t1];
       glue += `<polyline class="glue" points="${f(g0[0])},${f(g0[1])} ${f(g1[0])},${f(g1[1])}"/>`;
     }
-    hit += `<polyline class="hit" data-i="${i}" points="${f(a[0])},${f(a[1])} ${f(c[0])},${f(c[1])}"><title>Tronçon ${i + 1} : ${s.on ? "collé" : "libre"}</title></polyline>`;
+    hit += `<polyline class="hit" data-i="${i}" points="${f(a[0])},${f(a[1])} ${f(c[0])},${f(c[1])}"><title>Tronçon ${i + 1} : ${s.on ? (tenuParAdhesif(i) ? "collé, tenu par l'autocollant" : "collé") : "libre"}</title></polyline>`;
     const mx = (a[0] + c[0]) / 2 - d.y * 24, my = (a[1] + c[1]) / 2 + d.x * 24 + 5;
     txt += `<text x="${f(mx)}" y="${f(my)}">${esc(fmt(l, 0))}</text>`;
   });
@@ -212,7 +228,7 @@ function maj() {
     if (pr.indexFiche) bouts.push(ficheLien(pr.indexFiche));
     $("produitFiche").innerHTML = bouts.join(" · "); }
   $("mesure").querySelectorAll("button").forEach((x) => { const on = (x.dataset.k === "mes") === b.mesure; x.classList.toggle("on", on); x.setAttribute("aria-checked", String(on)); });
-  dessiner();
+  dessiner(); etiquettesTroncons();
   const r = calculBande(b, reg);
   const g = reglages(reg);
   const p = PRODUITS[b.produit] ?? {};
