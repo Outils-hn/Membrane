@@ -135,16 +135,30 @@ export const DIRS = [
 ];
 export const dir = (id) => DIRS.find((d) => d.id === id) ?? DIRS[0];
 
-/** Lit un nombre ecrit a la francaise (virgule, espaces, apostrophe suisse). NaN si vide ou illisible. */
+/**
+ * Lit un nombre ecrit a la francaise, a la suisse ou a l'anglaise : « 1250,5 », « 1'250.5 », « 1.250,5 », « 1,250.5 ».
+ * Avec point ET virgule, le dernier est la decimale. Plusieurs virgules ou plusieurs points seuls (« 1,2,3 », « 12..5 »),
+ * ou une notation comme « 1e3 » / « 0x1F » : NaN, jamais un nombre devine. Meme regle dans toutes les applis.
+ */
 export function nombre(s) {
-  const t = String(s ?? "").replace(/[\s'’]/g, "").replace(",", ".");
-  return t === "" ? NaN : Number(t);
+  let t = String(s ?? "").replace(/[\s\u00a0\u202f'\u2019\u2018]/g, "");
+  const nbV = (t.match(/,/g) ?? []).length, nbP = (t.match(/\./g) ?? []).length;
+  if (nbV && nbP) {
+    const dec = t.lastIndexOf(",") > t.lastIndexOf(".") ? "," : ".";
+    if ((dec === "," ? nbV : nbP) > 1) return NaN;
+    t = t.split(dec === "," ? "." : ",").join("").replace(",", ".");
+  } else if (nbV > 1 || nbP > 1) return NaN;
+  else t = t.replace(",", ".");
+  return /^-?\d*\.?\d+$/.test(t) ? Number(t) : NaN;
 }
 const pos = (s) => { const v = nombre(s); return Number.isFinite(v) && v > 0 ? v : 0; };
 
-/** Affiche un nombre avec une virgule et un nombre fixe de decimales (jamais « -0,0 »). */
+/** Affiche un nombre avec une virgule, l'apostrophe suisse pour les milliers et un nombre fixe de decimales (jamais « -0,0 »). */
 export function fmt(n, d = 1) {
-  return (Math.abs(n) < 0.5 * 10 ** -d ? 0 : n).toFixed(d).replace(".", ",");
+  const t = (Math.abs(n) < 0.5 * 10 ** -d ? 0 : n).toFixed(d);
+  const [e, f] = t.split(".");
+  const entier = e.replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+  return f ? `${entier},${f}` : entier;
 }
 
 /** Largeur de la bande une fois depliee = somme des troncons (mm). */
