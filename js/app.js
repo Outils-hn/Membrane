@@ -1,5 +1,5 @@
 // Membrane : affichage et saisie. Les calculs sont dans core.js.
-import { PRODUITS, COLLE, DIRS, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "./core.js";
+import { PRODUITS, DIRS, colles, colleChoisie, produitsMembrane, libelleItem, REGLAGES_DEFAUT, dir, nombre, fmt, calculBande, commande, positionCordon, reglages, chargerCatalogue, libelleProduit, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
 const CLE = "membrane.v1";
@@ -14,7 +14,7 @@ const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const CLE_PROD = "membrane.produits";
 try { chargerCatalogue(JSON.parse(localStorage.getItem(CLE_PROD) ?? "null")); } catch (e) { /* stockage bloque : produits d'origine */ }
 const sauverCatalogue = () => { try { localStorage.setItem(CLE_PROD, JSON.stringify(PRODUITS)); } catch (e) { /* ignore */ } };
-const premierProduit = () => Object.keys(PRODUITS)[0];
+const premierProduit = () => produitsMembrane()[0]?.id;
 
 // ---------- Etat : la bande en cours + la commande (gardes dans le navigateur) ----------
 const NEUF = () => ({
@@ -24,7 +24,7 @@ const NEUF = () => ({
 let b = NEUF();       // bande en cours de dessin
 let lignes = [];      // la commande
 let edition = null;   // id de la ligne en cours de modification
-let reg = { ...REGLAGES_DEFAUT }; // reglages de la commande (colle, marge, recouvrement)
+let reg = { ...REGLAGES_DEFAUT, colle: "" }; // reglages de la commande (colle choisie, marge, recouvrement)
 try {
   const lu = JSON.parse(localStorage.getItem(CLE) ?? "null");
   if (lu?.bande) b = nettoyer(lu.bande);
@@ -75,7 +75,13 @@ function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add
 // ---------- Menus de choix maison (comme dans Joint) ----------
 const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function selDef(cle) {
-  if (cle === "produit") return { cur: b.produit, set: (k) => { b.produit = k; }, opts: () => Object.entries(PRODUITS).map(([k, p]) => ({ k, nom: p.nom, meta: p.role || p.fournisseur })) };
+  if (cle === "produit") return { cur: b.produit, set: (k) => { b.produit = k; }, opts: () => produitsMembrane().map((p) => ({ k: p.id, nom: p.nom, meta: p.role || p.fournisseur })) };
+  if (cle === "colle") return {
+    cur: colleChoisie(reg).id,
+    // Changer de colle remet sa couverture et son cordon habituels
+    set: (k) => { const c = colles().find((x) => x.id === k); if (!c) return; reg.colle = k; reg.cordon = String(c.cordonMm).replace(".", ","); reg.cartouche = String(c.metres).replace(".", ","); },
+    opts: () => colles().map((c) => ({ k: c.id, nom: c.nom, meta: c.fournisseur })),
+  };
   const i = Number(cle.slice(4));
   return { cur: b.segs[i]?.dir, set: (k) => { b.segs[i].dir = k; }, opts: () => DIRS.map((d) => ({ k: d.id, nom: `${d.fleche} ${d.nom}`, meta: "" })) };
 }
@@ -102,6 +108,7 @@ document.addEventListener("click", (e) => {
   } else if (choix) {
     const box = choix.closest(".sel"); selDef(box.dataset.sel).set(choix.dataset.k);
     fermerMenus(null); box.querySelector(".sel-btn").focus(); maj();
+    if (box.dataset.sel === "colle") { afficherBiblio(); afficherCommande(); }
   } else if (!e.target.closest(".sel")) fermerMenus(null);
 });
 document.addEventListener("keydown", (e) => {
@@ -117,7 +124,6 @@ document.addEventListener("keydown", (e) => {
 // ---------- Champs simples ----------
 for (const k of ["facade", "etage", "plan", "longueur"]) $(k).addEventListener("input", () => { b[k] = $(k).value; maj(); });
 for (const k of Object.keys(REGLAGES_DEFAUT)) $(k).addEventListener("input", () => { reg[k] = $(k).value; maj(); afficherCommande(); });
-$("cartSeg").innerHTML = COLLE.choixMetres.map((m) => `<button type="button" data-m="${m}">${fmt(m, m % 1 ? 1 : 0)} m<br><small>${m === 10 ? "courant" : "défavorable"}</small></button>`).join("");
 $("cartSeg").addEventListener("click", (e) => { const x = e.target.closest("button[data-m]"); if (x) { reg.cartouche = x.dataset.m.replace(".", ","); maj(); afficherCommande(); } });
 $("mesure").innerHTML = `<button type="button" role="radio" data-k="std">Standard</button><button type="button" role="radio" data-k="mes">Coupée sur mesure</button>`;
 $("mesure").addEventListener("click", (e) => { const x = e.target.closest("button[data-k]"); if (x) { b.mesure = x.dataset.k === "mes"; maj(); } });
@@ -190,9 +196,12 @@ const pluriel = (n, un, plus) => (n > 1 ? plus : un);
 function maj() {
   for (const k of ["facade", "etage", "plan", "longueur"]) if ($(k).value !== b[k]) $(k).value = b[k];
   for (const k of Object.keys(REGLAGES_DEFAUT)) if ($(k).value !== reg[k]) $(k).value = reg[k];
-  const cartNum = reglages(reg).cartouche;
+  const cartNum = reglages(reg).cartouche, cl = reglages(reg).colle;
+  { const choix = cl.metresMin ? [[cl.metres, "courant"], [cl.metresMin, "défavorable"]] : [[cl.metres, "courant"]];
+    const html = choix.map(([m, t]) => `<button type="button" data-m="${m}">${fmt(m, m % 1 ? 1 : 0)} m<br><small>${t}</small></button>`).join("");
+    if ($("cartSeg").dataset.h !== html) { $("cartSeg").innerHTML = html; $("cartSeg").dataset.h = html; $("cartSeg").classList.toggle("deux", choix.length > 1); } }
   $("cartSeg").querySelectorAll("button").forEach((x) => { const on = Math.abs(Number(x.dataset.m) - cartNum) < 1e-9; x.classList.toggle("on", on); x.setAttribute("aria-pressed", String(on)); });
-  if (!PRODUITS[b.produit]) b.produit = premierProduit();
+  if (!PRODUITS[b.produit] || PRODUITS[b.produit].type === "colle") b.produit = premierProduit();
   majSelects();
   { const pr = PRODUITS[b.produit] ?? {}, bouts = [];
     if (pr.sd) bouts.push(`<span class="hint-sd" title="Résistance à la diffusion de vapeur d'eau : plus c'est haut, plus la membrane freine la vapeur">sd ≈ ${fmt(pr.sd, pr.sd % 1 ? 1 : 0)} m</span>`);
@@ -216,7 +225,7 @@ function maj() {
   $("rRoul").textContent = String(roul); $("rRoulL").textContent = `${pluriel(roul, "rouleau", "rouleaux")} de ${r.roll.largeur} mm${r.roll.mesure ? " (sur mesure)" : r.roll.surDemande ? " (sur demande)" : ""}`;
   $("rWhy").textContent = `Bande dépliée : ${fmt(r.dev, 0)} mm, donc ${r.roll.mesure ? "coupée à " : "rouleau de "}${r.roll.largeur} mm en ${p.court}. `
     + `Longueur : ${fmt(r.run, 2)} m${g.marge ? ` + marge ${fmt(g.marge * 100, 0)} %` : ""}${g.recouvrement ? ` + recouvrement ${fmt(g.recouvrement * 100, 0)} cm` : ""} = ${fmt(r.longueur, 2)} m. `
-    + (r.auto ? "Membrane autocollante : pas de colle à prévoir." : `Colle : ${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} × ${fmt(r.longueur, 2)} m = ${fmt(r.cordonM, 1)} m, à ${fmt(g.cartouche, g.cartouche % 1 ? 1 : 0)} m par cartouche de ${COLLE.ml} ml.`);
+    + (r.auto ? "Membrane autocollante : pas de colle à prévoir." : `Colle : ${r.nCollés} cordon${pluriel(r.nCollés, "", "s")} × ${fmt(r.longueur, 2)} m = ${fmt(r.cordonM, 1)} m, à ${fmt(g.cartouche, g.cartouche % 1 ? 1 : 0)} m par cartouche de ${g.colle.ml} ml.`);
   $("rAlertes").innerHTML = r.alertes.map((a) => `<p>${esc(a)}</p>`).join("");
   $("ajouter").disabled = false;
   $("ajouter").textContent = edition ? "Mettre à jour la ligne" : "Ajouter à la commande";
@@ -236,7 +245,7 @@ function afficherCommande() {
       g.lignes.map(({ ligne: l, r }) => `<tr${edition === l.id ? ' class="edit"' : ""}><td>${esc(l.etage) || "—"}</td><td>${esc(l.plan) || "—"}</td><td>${esc(nomProduit(l, r))}</td><td class="num">${deuxPoints(r.run)} m</td><td class="num">${r.auto ? "autocollante" : `${r.nCollés} × ${fmt(r.longueur, 2)} m`}</td><td class="act"><button type="button" data-a="edit" data-id="${l.id}">Modifier</button><button type="button" data-a="del" data-id="${l.id}">Supprimer</button></td></tr>`).join("")}</tbody></table></div>`).join("");
   $("cmdTotal").innerHTML = `<div class="tscroll"><table class="tbl"><thead><tr><th>Article</th><th class="num">Quantité</th><th>Détail</th></tr></thead><tbody>${
     c.articles.map((a) => `<tr><td>${esc(libelleProduit(a.produit))}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m</td><td class="num"><b>${a.rouleaux}</b></td><td>${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m</td></tr>`).join("")
-  }${c.cartouches ? `<tr><td>${esc(COLLE.nom)}, ${COLLE.ml} ml</td><td class="num"><b>${c.cartouches}</b></td><td>${deuxPoints(c.cordonM)} m de cordon, à ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m par cartouche (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})</td></tr>` : ""}</tbody></table></div>`;
+  }${c.cartouches ? `<tr><td>${esc(libelleItem(c.colle))}, ${c.colle.ml} ml</td><td class="num"><b>${c.cartouches}</b></td><td>${deuxPoints(c.cordonM)} m de cordon, à ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m par cartouche (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${c.colle.parCarton})</td></tr>` : ""}</tbody></table></div>`;
 }
 $("ajouter").addEventListener("click", () => {
   const r = calculBande(b); if (!r || !r.roll) return;
@@ -270,7 +279,7 @@ function tableauTexte() {
   for (const g of c.facades) for (const { ligne, r } of g.lignes) l.push([g.facade, ligne.etage, ligne.plan, libelleProduit(ligne.produit), r.roll.largeur, fmt(r.run, 1), fmt(r.longueur, 2), r.nCollés, fmt(r.cordonM, 1)].join("\t"));
   l.push("");
   for (const a of c.articles) l.push([`${libelleProduit(a.produit)} ${a.largeur} mm${a.mesure ? " (sur mesure)" : ""}`, `${a.rouleaux} rouleau(x) de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`].join("\t"));
-  l.push([`${COLLE.nom} ${COLLE.ml} ml`, `${c.cartouches} cartouche(s)`].join("\t"));
+  l.push([`${libelleItem(c.colle)} ${c.colle.ml} ml`, `${c.cartouches} cartouche(s)`].join("\t"));
   return l.join("\n");
 }
 $("xlsBtn").addEventListener("click", async () => {
@@ -284,7 +293,7 @@ $("mailBtn").addEventListener("click", () => {
   const c = commande(lignes, reg);
   const corps = ["Bonjour,", "", "Commande de membranes d'étanchéité :", "",
     ...c.articles.map((a) => `- ${a.rouleaux} × ${libelleProduit(a.produit)}, ${a.largeur} mm${a.mesure ? " (coupée sur mesure)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`),
-    `- ${c.cartouches} × ${COLLE.nom}, ${COLLE.ml} ml`, "", "Merci d'avance."].join("\n");
+    `- ${c.cartouches} × ${libelleItem(c.colle)}, ${c.colle.ml} ml`, "", "Merci d'avance."].join("\n");
   location.href = `mailto:?subject=${encodeURIComponent("Commande membranes d'étanchéité")}&body=${encodeURIComponent(corps)}`;
 });
 
@@ -337,7 +346,7 @@ async function exportPdf() {
     head: [["Article", "Quantité", "Détail"]],
     body: [
       ...c.articles.map((a) => [`${libelleProduit(a.produit)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`, String(a.rouleaux), `${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""}, chutes ${deuxPoints(a.chutes)} m`]),
-      ...(c.cartouches ? [[`${COLLE.nom}, ${COLLE.ml} ml`, String(c.cartouches), `${deuxPoints(c.cordonM)} m de cordon (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})`]] : []),
+      ...(c.cartouches ? [[`${libelleItem(c.colle)}, ${c.colle.ml} ml`, String(c.cartouches), `${deuxPoints(c.cordonM)} m de cordon (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${c.colle.parCarton})`]] : []),
     ].map((row) => row.map(pdfText)),
     columnStyles: { 0: { cellWidth: "wrap" }, 1: { halign: "right", fontStyle: "bold", cellWidth: "wrap" }, 2: { fontSize: 8.5 } },
     didParseCell: (d) => { if (d.section === "body" && d.column.index < 2) d.cell.styles.overflow = "visible"; },
@@ -357,7 +366,7 @@ async function exportPdf() {
   }
   if (y > 262) { doc.addPage(); y = 18; }
   doc.setFont("PlexSans", "normal").setFontSize(8).setTextColor(...GREY);
-  doc.splitTextToSize(pdfText(`Hypotheses : 1 cartouche de ${COLLE.ml} ml couvre ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m ; marge ${fmt(c.reglages.marge * 100, 0)} % ; recouvrement entre pieces ${fmt(c.reglages.recouvrement * 100, 0)} cm ; rouleaux de 25 m (ou la longueur de la bibliotheque), pieces rangees dans les rouleaux (chutes comptees).`), 210 - 2 * M).forEach((t, i) => doc.text(t, M, y + i * 3.6));
+  doc.splitTextToSize(pdfText(`Hypotheses : 1 cartouche de ${c.colle.ml} ml couvre ${fmt(c.reglages.cartouche, c.reglages.cartouche % 1 ? 1 : 0)} m ; marge ${fmt(c.reglages.marge * 100, 0)} % ; recouvrement entre pieces ${fmt(c.reglages.recouvrement * 100, 0)} cm ; rouleaux de 25 m (ou la longueur de la bibliotheque), pieces rangees dans les rouleaux (chutes comptees).`), 210 - 2 * M).forEach((t, i) => doc.text(t, M, y + i * 3.6));
   const n = doc.getNumberOfPages();
   for (let i = 1; i <= n; i++) {
     doc.setPage(i); doc.setFont("PlexSans", "normal").setFontSize(7.5).setTextColor(...GREY);
@@ -456,7 +465,7 @@ $("compteBtn").addEventListener("click", async () => {
 });
 window.addEventListener("storage", (e) => { if (e.key === SESSION_KEY) { afficherCompte(); afficherBiblio(); } });
 
-const idsUtilises = () => new Set(lignes.map((l) => l.produit));
+const idsUtilises = () => new Set([...lignes.map((l) => l.produit), colleChoisie(reg).id]);
 async function synchroniser(manuel = false) {
   partage.etat = "sync"; afficherEtatPartage();
   let rows = null;
@@ -524,19 +533,29 @@ const ETATS = { shared: ["Partagé avec l'équipe", "ok"], modified: ["Modifié 
 let biblioEdit = null; // id du produit en cours de modification ("" = nouveau)
 let ficheForm = null, fichePicking = false; // fiche Index choisie dans le formulaire
 function afficherBiblio() {
-  const ids = Object.keys(PRODUITS), connecte = !!lireSession();
-  $("biblioSub").textContent = `${ids.length} produit${ids.length > 1 ? "s" : ""}`;
-  $("biblioListe").innerHTML = ids.map((k) => {
-    const p = PRODUITS[k], etat = sharedStatus(itemAvecId(k), base), [et, cl] = ETATS[etat];
-    const chips = p.largeurs.map((w) => `<span class="chip${p.surDemande.includes(w) ? " dem" : ""}" title="${p.surDemande.includes(w) ? "Sur demande" : "En stock"}">${w}${p.surDemande.includes(w) ? "*" : ""}</span>`).join("");
+  const mem = produitsMembrane(), col = colles(), connecte = !!lireSession();
+  $("biblioSub").textContent = `${mem.length} produit${mem.length > 1 ? "s" : ""}, ${col.length} colle${col.length > 1 ? "s" : ""}`;
+  const entete = (k, p, etat) => { const [et, cl] = ETATS[etat]; return `<div class="ph"><b>${esc(p.nom)}</b>${p.fournisseur ? `<span class="fo">${esc(p.fournisseur)}</span>` : ""}${p.role ? `<span class="ro">${esc(p.role)}</span>` : ""}<span class="st ${cl}">${et}</span></div>`; };
+  const boutonsDe = (k, etat) => {
     const boutons = [`<button type="button" class="mini" data-a="edit" data-k="${esc(k)}">Modifier</button>`];
     if (etat !== "shared") boutons.push(`<button type="button" class="mini pri" data-a="send" data-k="${esc(k)}">${connecte ? "Envoyer à l'équipe" : "Se connecter pour envoyer"}</button>`);
     if (etat === "modified") boutons.push(`<button type="button" class="mini" data-a="revert" data-k="${esc(k)}">Annuler mes modifications</button>`);
     boutons.push(`<button type="button" class="mini" data-a="del" data-k="${esc(k)}">${etat === "local" ? "Supprimer" : "Retirer pour l'équipe"}</button>`);
-    return `<div class="prod"><div class="ph"><b>${esc(p.nom)}</b>${p.fournisseur ? `<span class="fo">${esc(p.fournisseur)}</span>` : ""}${p.role ? `<span class="ro">${esc(p.role)}</span>` : ""}<span class="st ${cl}">${et}</span></div>
+    return boutons.join("");
+  };
+  $("biblioListe").innerHTML = mem.map((p) => {
+    const k = p.id, etat = sharedStatus(itemAvecId(k), base);
+    const chips = p.largeurs.map((w) => `<span class="chip${p.surDemande.includes(w) ? " dem" : ""}" title="${p.surDemande.includes(w) ? "Sur demande" : "En stock"}">${w}${p.surDemande.includes(w) ? "*" : ""}</span>`).join("");
+    return `<div class="prod">${entete(k, p, etat)}
       <div class="chips">${chips}</div>
       <div class="pm">Largeurs en mm${p.surDemande.length ? " (* sur demande)" : ""} · rouleaux de ${fmt(p.rouleauM, p.rouleauM % 1 ? 1 : 0)} m${p.sd ? ` · sd ≈ ${fmt(p.sd, p.sd % 1 ? 1 : 0)} m` : ""}${p.autocollant ? " · autocollante" : ""}${p.indexFiche ? ` · ${ficheLien(p.indexFiche)}` : ""}</div>
-      <div class="pa">${boutons.join("")}</div></div>`;
+      <div class="pa">${boutonsDe(k, etat)}</div></div>`;
+  }).join("");
+  $("biblioColles").innerHTML = col.map((p) => {
+    const k = p.id, etat = sharedStatus(itemAvecId(k), base), m = (v) => fmt(v, v % 1 ? 1 : 0);
+    return `<div class="prod colle">${entete(k, p, etat)}
+      <div class="pm">Cartouche de ${m(p.ml)} ml · couvre ${m(p.metres)} m${p.metresMin ? ` (${m(p.metresMin)} m au plus défavorable)` : ""} · cordon de ${m(p.cordonMm)} mm · ${p.parCarton} par carton${p.id === colleChoisie(reg).id ? " · <b>utilisée pour la commande</b>" : ""}</div>
+      <div class="pa">${boutonsDe(k, etat)}</div></div>`;
   }).join("");
 }
 function afficherFicheForm() {
@@ -596,22 +615,64 @@ $("biblioForm").addEventListener("submit", (e) => {
   toast(biblioEdit ? "Produit modifié" : "Produit ajouté : envoie-le à l'équipe pour le partager");
 });
 let armeSuppr = null, armeT;
-$("biblioListe").addEventListener("click", async (e) => {
+async function surBiblio(e) {
   const x = e.target.closest("button[data-a]"); if (!x) return;
-  const k = x.dataset.k;
-  if (x.dataset.a === "edit") { ouvrirForm(k); return; }
+  const k = x.dataset.k, estColle = PRODUITS[k]?.type === "colle";
+  if (x.dataset.a === "edit") { if (estColle) ouvrirColleForm(k); else ouvrirForm(k); return; }
   if (x.dataset.a === "send") { await envoyer(k); return; }
   if (x.dataset.a === "revert") { annulerModifs(k); return; }
-  if (Object.keys(PRODUITS).length <= 1) { toast("Il faut garder au moins un produit"); return; }
-  if (lignes.some((l) => l.produit === k)) { toast("Ce produit est utilisé dans la commande : retire d'abord ces lignes"); return; }
+  if (estColle) {
+    if (colles().length <= 1) { toast("Il faut garder au moins une colle"); return; }
+    if (colleChoisie(reg).id === k) { toast("Cette colle est choisie pour la commande : choisis-en une autre dans les réglages"); return; }
+  } else {
+    if (produitsMembrane().length <= 1) { toast("Il faut garder au moins un produit"); return; }
+    if (lignes.some((l) => l.produit === k)) { toast("Ce produit est utilisé dans la commande : retire d'abord ces lignes"); return; }
+  }
   if (armeSuppr !== k) { armeSuppr = k; x.textContent = "Sûr ? Clique encore"; clearTimeout(armeT); armeT = setTimeout(() => { armeSuppr = null; afficherBiblio(); }, 4000); return; }
   armeSuppr = null;
   if (sharedStatus(itemAvecId(k), base) !== "local" && !(await retirerDuPartage(k))) { afficherBiblio(); return; }
   const rest = { ...PRODUITS }; delete rest[k];
-  chargerCatalogue(rest); sauverCatalogue(); afficherBiblio(); maj(); afficherCommande(); toast("Produit supprimé");
+  chargerCatalogue(rest); sauverCatalogue(); afficherBiblio(); maj(); afficherCommande(); toast(estColle ? "Colle supprimée" : "Produit supprimé");
+}
+$("biblioListe").addEventListener("click", surBiblio);
+$("biblioColles").addEventListener("click", surBiblio);
+
+// ---------- Colles de la bibliotheque : ajouter / modifier ----------
+let colleEdit = null; // id de la colle en cours de modification ("" = nouvelle)
+const virg = (v) => String(v).replace(".", ",");
+function ouvrirColleForm(k) {
+  colleEdit = k;
+  const p = k ? PRODUITS[k] : null;
+  $("colleTitre").textContent = p ? `Modifier « ${p.nom} »` : "Nouvelle colle";
+  $("cNom").value = p?.nom ?? ""; $("cFour").value = p?.fournisseur ?? "";
+  $("cMl").value = p ? virg(p.ml) : "600"; $("cCarton").value = p ? String(p.parCarton) : "20";
+  $("cMetres").value = p ? virg(p.metres) : "10"; $("cMin").value = p?.metresMin ? virg(p.metresMin) : "";
+  $("cCordon").value = p ? virg(p.cordonMm) : "45";
+  $("colleErr").textContent = ""; $("colleForm").classList.remove("hidden"); $("cNom").focus();
+}
+const fermerColleForm = () => { colleEdit = null; $("colleForm").classList.add("hidden"); };
+$("biblioNouvelleColle").addEventListener("click", () => ouvrirColleForm(""));
+$("colleAnnuler").addEventListener("click", fermerColleForm);
+$("colleForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const nom = $("cNom").value.trim(), ml = nombre($("cMl").value), carton = nombre($("cCarton").value), metres = nombre($("cMetres").value);
+  const min = $("cMin").value.trim() ? nombre($("cMin").value) : 0, cordon = nombre($("cCordon").value);
+  const err = !nom ? "Donne un nom à la colle."
+    : !(ml > 0) ? "Le contenu d'une cartouche est un nombre en ml."
+    : !(carton >= 1) ? "Le nombre de cartouches par carton est un nombre entier."
+    : !(metres > 0) ? "La couverture d'une cartouche est un nombre en m."
+    : min && !(min > 0 && min < metres) ? "Le cas défavorable doit être plus petit que le cas courant (ou laisse vide)."
+    : !(cordon > 0) ? "La largeur du cordon est un nombre en mm."
+    : Object.entries(PRODUITS).some(([k, p]) => k !== colleEdit && p.nom.toLowerCase() === nom.toLowerCase()) ? "Un produit ou une colle porte déjà ce nom." : "";
+  if (err) { $("colleErr").innerHTML = `<p>${esc(err)}</p>`; return; }
+  const id = colleEdit || `c${Date.now().toString(36)}`;
+  const colle = { type: "colle", nom, court: nom, fournisseur: $("cFour").value, ml, parCarton: Math.round(carton), metres, ...(min ? { metresMin: min } : {}), cordonMm: cordon, ...(PRODUITS[id]?.indexFiche ? { indexFiche: PRODUITS[id].indexFiche } : {}) };
+  chargerCatalogue({ ...PRODUITS, [id]: colle }); sauverCatalogue(); fermerColleForm(); afficherBiblio(); maj(); afficherCommande();
+  toast(colleEdit ? "Colle modifiée" : "Colle ajoutée : envoie-la à l'équipe pour la partager");
 });
 
 // ---------- Demarrage ----------
 $("produitSel").innerHTML = selHtml("produit", "Produit utilisé");
+$("colleSel").innerHTML = selHtml("colle", "Colle utilisée");
 afficherBiblio(); afficherEtatPartage(); afficherCompte(); synchroniser();
 lignesTroncons(); maj(); afficherCommande();

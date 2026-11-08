@@ -180,7 +180,7 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Connexion : champs obligatoires", /email et le mot de passe/.test(await txt(page, "#cErreur")), await txt(page, "#cErreur"));
   await page.fill("#cEmail", "hugo@test.fr"); await page.fill("#cMdp", "secret");
   await page.click("#cOk"); await page.waitForTimeout(500);
-  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 4 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
+  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 5 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
   verif("Le produit envoye garde sa fiche et son rouleau de 50 m", Object.values(equipe).some((e) => e.data.indexFiche?.id === "f2" && e.data.rouleauM === 50));
   verif("Le produit est maintenant « partage avec l'equipe »", (await page.locator("#biblioListe .st.ok").count()) === 4, await txt(page, "#biblioListe"));
   // Un collegue (autre poste) recoit le produit
@@ -203,6 +203,25 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Produit partage : le bouton dit « Retirer pour l'equipe »", /Retirer pour l'équipe/.test(await txt(page, '#biblioListe .prod:has-text("Isover") .pa')));
   await supp.click(); await supp.click(); await page.waitForTimeout(300);
   verif("Retire pour l'equipe : disparait ici et chez l'equipe", (await page.locator("#biblioListe .prod").count()) === 3 && Object.values(equipe).some((e) => e.data.nom === "Isover Vario Xtra" && e.deleted_at), await txt(page, "#biblioListe"));
+  // ---- Colles de la bibliotheque ----
+  verif("Colle d'origine listee, partagee, marquee « utilisee »", (await page.locator("#biblioColles .prod").count()) === 1 && /SikaBond-444/.test(await txt(page, "#biblioColles")) && /Partagé avec l'équipe/.test(await txt(page, "#biblioColles")) && /utilisée pour la commande/.test(await txt(page, "#biblioColles")), await txt(page, "#biblioColles"));
+  await page.click("#biblioNouvelleColle");
+  await page.fill("#cNom", "Colle Test"); await page.fill("#cFour", "Autre"); await page.fill("#cMl", "310"); await page.fill("#cCarton", "12"); await page.fill("#cMetres", "5"); await page.fill("#cMin", "6"); await page.fill("#cCordon", "30");
+  await page.click("#colleForm button[type=submit]");
+  verif("Cas defavorable plus grand que le courant refuse", /plus petit/.test(await txt(page, "#colleErr")), await txt(page, "#colleErr"));
+  await page.fill("#cMin", "4"); await page.click("#colleForm button[type=submit]");
+  verif("Colle ajoutee : listee, sur ce poste seulement, avec ses chiffres", (await page.locator("#biblioColles .prod").count()) === 2 && /Colle Test/.test(await txt(page, "#biblioColles")) && /Cartouche de 310 ml · couvre 5 m \(4 m au plus défavorable\) · cordon de 30 mm · 12 par carton/.test(await txt(page, "#biblioColles")) && (await page.locator("#biblioColles .st:not(.ok)").count()) === 1, await txt(page, "#biblioColles"));
+  await page.locator("#reglages").evaluate((el) => { el.open = true; });
+  await page.locator("#colleSel .sel-btn").click(); await page.locator('#colleSel .sel-pop button:has-text("Colle Test")').click();
+  verif("Colle choisie : couverture et cordon repris, choix rapide 5 / 4", (await page.inputValue("#cartouche")) === "5" && (await page.inputValue("#cordon")) === "30" && (await page.locator("#cartSeg button").count()) === 2 && /utilisée pour la commande/.test(await txt(page, "#biblioColles .prod:has-text('Colle Test')")), `${await page.inputValue("#cartouche")} / ${await page.inputValue("#cordon")}`);
+  verif("Le calcul donne le contenu de la nouvelle colle", /310 ml/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
+  await page.locator('#biblioColles .prod:has-text("Colle Test") button[data-a="del"]').click();
+  verif("Colle choisie : suppression refusee", (await page.locator("#biblioColles .prod").count()) === 2 && /choisie pour la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
+  await page.locator("#colleSel .sel-btn").click(); await page.locator('#colleSel .sel-pop button:has-text("SikaBond")').click();
+  verif("Retour a la colle d'origine : 10 m, 45 mm", (await page.inputValue("#cartouche")) === "10" && (await page.inputValue("#cordon")) === "45" && (await page.locator("#cartSeg button").count()) === 2);
+  await page.locator('#biblioColles .prod:has-text("Colle Test") button[data-a="del"]').click(); await page.locator('#biblioColles .prod:has-text("Colle Test") button[data-a="del"]').click();
+  verif("Colle supprimee (confirmation en deux clics)", (await page.locator("#biblioColles .prod").count()) === 1);
+  verif("Derniere colle : impossible de la supprimer", await (async () => { await page.locator('#biblioColles .prod button[data-a="del"]').click(); return (await page.locator("#biblioColles .prod").count()) === 1 && /au moins une colle/.test(await txt(page, "#toast")); })());
   await page.click("#compteBtn");
   verif("Se deconnecter : retour en lecture seule", (await txt(page, "#etatCompte")) === "Lecture seule");
   await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true });
@@ -276,7 +295,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.8", /Membrane v1\.8/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.9", /Membrane v1\.9/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");

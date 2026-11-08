@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "../js/core.js";
+import { colles, colleChoisie, produitsMembrane, nombre, fmt, developpe, largeurRouleau, positionCordon, calculBande, commande, rangEtage, piecesBande, rangerRouleaux, reglages, PRODUITS, PRODUITS_DEFAUT, chargerCatalogue, libelleProduit, longueurRouleau, nettoyerProduit, mergeShared, sharedStatus, stable, produitsEnListe, chargerListe } from "../js/core.js";
 
 const proche = (a, b, m) => assert.ok(Math.abs(a - b) < 1e-6, `${m ?? ""} ${a} ≠ ${b}`);
 
@@ -135,7 +135,7 @@ test("produits : Outdoor plus a 6 largeurs (dont 1400 sur demande)", () => {
 
 test("bibliotheque : nettoyage, produit d'un autre fournisseur, retour aux produits d'origine", () => {
   chargerCatalogue({ x: { nom: " Isover Vario ", fournisseur: "Isocell", role: "pare-vapeur", largeurs: ["1500", "1000", "abc", -5], surDemande: [2000, 1000], rouleauM: "50" }, vide: { nom: "", largeurs: [100] }, sans: { nom: "Sans largeur", largeurs: [] } });
-  assert.deepEqual(Object.keys(PRODUITS), ["x"]);
+  assert.deepEqual(Object.keys(PRODUITS), ["x", "colle444"]); // la colle d'origine est toujours là
   assert.deepEqual(PRODUITS.x.largeurs, [1000, 1500, 2000]); assert.deepEqual(PRODUITS.x.surDemande, [1000, 2000]);
   assert.equal(PRODUITS.x.nom, "Isover Vario"); assert.equal(PRODUITS.x.court, "Isover Vario"); assert.equal(PRODUITS.x.rouleauM, 50);
   assert.equal(libelleProduit("x"), "Isover Vario (Isocell)"); assert.equal(longueurRouleau("x"), 50);
@@ -178,7 +178,7 @@ test("catalogue commun : fusion (nouveau, mis a jour, modifie ici, retire, jamai
   assert.equal(mergeShared([eq], [{ id: "a", data: p("A"), deleted_at: "2026-11-07" }], base0, new Set(["a"])).items.length, 1);
   assert.equal(mergeShared([mod], [{ id: "a", data: p("A"), deleted_at: "2026-11-07" }], base0).items.length, 1);
   // aller-retour liste <-> bibliotheque
-  chargerListe(r1.items); assert.deepEqual(Object.keys(PRODUITS), ["a", "c", "b"]); assert.equal(produitsEnListe()[0].id, "a");
+  chargerListe(r1.items); assert.deepEqual(Object.keys(PRODUITS), ["a", "c", "b", "colle444"]); assert.equal(produitsEnListe()[0].id, "a");
   chargerCatalogue(null);
 });
 
@@ -195,4 +195,24 @@ test("Universal SB : autocollante, pas de colle ; sd gardee dans la bibliotheque
   const n = nettoyerProduit({ nom: "X", largeurs: [100], sd: "abc", autocollant: "oui" });
   assert.equal(n.sd, undefined); assert.equal(n.autocollant, undefined);
   assert.deepEqual([nettoyerProduit({ nom: "X", largeurs: [100], sd: 12.5, autocollant: true })].map((p) => [p.sd, p.autocollant]), [[12.5, true]]);
+});
+
+test("colles : dans la bibliotheque, au moins une, choisie pour la commande", () => {
+  chargerCatalogue(null);
+  assert.deepEqual(colles().map((c) => c.id), ["colle444"]); assert.equal(produitsMembrane().length, 3);
+  assert.equal(colleChoisie({}).nom, "SikaBond-444 Membrane Fix"); assert.equal(colleChoisie({ colle: "inconnue" }).id, "colle444");
+  // nettoyage : valeurs invalides = valeurs d'origine ; cas defavorable gardé seulement s'il est plus petit
+  const n = nettoyerProduit({ type: "colle", nom: " Colle X ", fournisseur: "Autre", ml: "abc", metres: 8, metresMin: 9, parCarton: "12.4", cordonMm: -1 });
+  assert.deepEqual([n.nom, n.ml, n.metres, n.metresMin, n.parCarton, n.cordonMm], ["Colle X", 600, 8, undefined, 12, 45]);
+  // une autre colle : couverture, carton et cordon viennent d'elle
+  chargerCatalogue({ ...structuredClone(PRODUITS_DEFAUT), c2: { type: "colle", nom: "Colle Y", fournisseur: "Autre", ml: 310, metres: 5, parCarton: 12, cordonMm: 30 } });
+  assert.equal(colles().length, 2);
+  const g = reglages({ colle: "c2" }); assert.equal(g.cordon, 30); assert.equal(g.cartouche, 5);
+  const c = commande([z()], { colle: "c2" });
+  assert.equal(c.colle.nom, "Colle Y"); assert.equal(c.cartouches, Math.ceil(24.1 / 5 - 1e-9)); assert.equal(c.cartons, 1);
+  assert.equal(commande([z()], { cartouche: "5", colle: "colle444" }).cartons, 1);
+  // suppression de toutes les colles : la colle d'origine revient
+  chargerCatalogue({ x: { nom: "X", largeurs: [100] } });
+  assert.deepEqual(colles().map((x) => x.id), ["colle444"]);
+  chargerCatalogue(null);
 });
