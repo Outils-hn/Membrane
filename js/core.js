@@ -6,7 +6,6 @@
 export const PRODUITS_DEFAUT = {
   outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", fournisseur: "Sika", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400], rouleauM: 25 },
   uni: { nom: "SikaMembran Universal", court: "Universal", fournisseur: "Sika", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400], rouleauM: 25 },
-  out: { nom: "SikaMembran Outdoor", court: "Outdoor", fournisseur: "Sika", role: "", largeurs: [100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000, 1200, 1400], surDemande: [], rouleauM: 25 },
 };
 
 /** La bibliotheque en cours (modifiable : produits d'autres fournisseurs). Remplie par chargerCatalogue. */
@@ -17,23 +16,26 @@ export const PRODUITS = {};
  * (au moins une), « sur demande » = largeurs en plus, longueur de rouleau en m (25 par defaut).
  * Vide ou illisible = produits d'origine. Rend la bibliotheque.
  */
+export function nettoyerProduit(p) {
+  if (!p || typeof p !== "object" || typeof p.nom !== "string" || !p.nom.trim()) return null;
+  const nums = (l) => [...new Set((Array.isArray(l) ? l : []).map(Number).filter((n) => Number.isFinite(n) && n > 0).map((n) => Math.round(n)))];
+  const sd = nums(p.surDemande), std = nums(p.largeurs);
+  const largeurs = [...new Set([...std, ...sd])].sort((a, b) => a - b);
+  if (!largeurs.length) return null;
+  const m = Number(p.rouleauM), f = p.indexFiche;
+  const r = {
+    nom: p.nom.trim(), court: (typeof p.court === "string" && p.court.trim()) || p.nom.trim(),
+    fournisseur: typeof p.fournisseur === "string" ? p.fournisseur.trim() : "", role: typeof p.role === "string" ? p.role.trim() : "",
+    largeurs, surDemande: sd.filter((n) => largeurs.includes(n)).sort((a, b) => a - b), rouleauM: Number.isFinite(m) && m > 0 ? m : 25,
+  };
+  // Lien vers la fiche technique dans Index (id + nom de la fiche)
+  if (f && typeof f.id === "string" && f.id && typeof f.name === "string") r.indexFiche = { id: f.id, name: f.name };
+  return r;
+}
+
 export function chargerCatalogue(obj) {
   const propre = {};
-  if (obj && typeof obj === "object") {
-    for (const [k, p] of Object.entries(obj)) {
-      if (!p || typeof p !== "object" || typeof p.nom !== "string" || !p.nom.trim()) continue;
-      const nums = (l) => [...new Set((Array.isArray(l) ? l : []).map(Number).filter((n) => Number.isFinite(n) && n > 0).map((n) => Math.round(n)))];
-      const sd = nums(p.surDemande), std = nums(p.largeurs);
-      const largeurs = [...new Set([...std, ...sd])].sort((a, b) => a - b);
-      if (!largeurs.length) continue;
-      const m = Number(p.rouleauM);
-      propre[String(k)] = {
-        nom: p.nom.trim(), court: (typeof p.court === "string" && p.court.trim()) || p.nom.trim(),
-        fournisseur: typeof p.fournisseur === "string" ? p.fournisseur.trim() : "", role: typeof p.role === "string" ? p.role.trim() : "",
-        largeurs, surDemande: sd.filter((n) => largeurs.includes(n)).sort((a, b) => a - b), rouleauM: Number.isFinite(m) && m > 0 ? m : 25,
-      };
-    }
-  }
+  if (obj && typeof obj === "object") for (const [k, p] of Object.entries(obj)) { const n = nettoyerProduit(p); if (n) propre[String(k)] = n; }
   const src = Object.keys(propre).length ? propre : structuredClone(PRODUITS_DEFAUT);
   for (const k of Object.keys(PRODUITS)) delete PRODUITS[k];
   Object.assign(PRODUITS, src);
@@ -218,4 +220,58 @@ export function commande(lignes, reg = {}) {
   const facades = [...groupes.keys()].sort((a, b) => (a === "") - (b === "") || triNaturel(a, b))
     .map((f) => ({ facade: f, lignes: groupes.get(f).slice().sort((a, b) => rangEtage(a.ligne.etage) - rangEtage(b.ligne.etage) || triNaturel(a.ligne.etage ?? "", b.ligne.etage ?? "")) }));
   return { articles, cordonM, cartouches, cartons: Math.ceil(cartouches / COLLE.parCarton - 1e-9), facades, reglages: g };
+}
+
+// ---------- Catalogue commun a l'equipe (Supabase d'Index) : fusion avec la copie de ce poste ----------
+/** Les produits en liste (avec leur id), pour la fusion. */
+export const produitsEnListe = () => Object.entries(PRODUITS).map(([id, p]) => ({ ...p, id }));
+/** Remplace la bibliotheque par une liste de produits (avec id). */
+export const chargerListe = (items) => chargerCatalogue(Object.fromEntries(items.map(({ id, ...r }) => [id, r])));
+
+/** Empreinte stable d'un element (ordre des cles fige) pour savoir s'il a change. */
+export function stable(v) {
+  if (Array.isArray(v)) return "[" + v.map(stable).join(",") + "]";
+  if (v && typeof v === "object") return "{" + Object.keys(v).sort().map((k) => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}";
+  return JSON.stringify(v ?? null);
+}
+
+/**
+ * Fusionne la liste locale avec le catalogue commun (meme principe que Strate).
+ * - base : derniere version recue de l'equipe pour chaque id (sert a reperer les modifs locales) ;
+ * - produit commun pas modifie ici : version de l'equipe ; modifie ici : garde la version locale (« modified ») ;
+ * - produit retire par l'equipe : retire, sauf s'il est modifie ici ou utilise par la commande ;
+ * - produit jamais partage : garde (« local »).
+ * remote : lignes { id, data, deleted_at }. Rend { items, status, base, updated }.
+ */
+export function mergeShared(local, remote, base, used = new Set()) {
+  const byId = new Map(remote.map((r) => [r.id, r]));
+  const out = [], status = {}, newBase = {};
+  let updated = 0;
+  const donnee = (r) => { const n = nettoyerProduit(r.data); return n ? { ...n, id: r.id } : null; };
+  for (const item of local) {
+    const r = byId.get(item.id);
+    if (!r) { out.push(item); status[item.id] = "local"; continue; }
+    const modified = base[item.id] != null && stable(item) !== base[item.id];
+    if (r.deleted_at) { if (modified || used.has(item.id)) { out.push(item); status[item.id] = "local"; } continue; }
+    const remoteData = donnee(r);
+    if (!remoteData) { out.push(item); status[item.id] = "local"; continue; }
+    newBase[r.id] = stable(remoteData);
+    if (modified && stable(item) !== newBase[r.id]) { out.push(item); status[item.id] = "modified"; continue; }
+    if (stable(item) !== newBase[r.id]) updated++;
+    out.push(remoteData); status[r.id] = "shared";
+  }
+  const localIds = new Set(local.map((x) => x.id));
+  for (const r of remote) {
+    if (r.deleted_at || localIds.has(r.id)) continue;
+    const remoteData = donnee(r); if (!remoteData) continue;
+    newBase[r.id] = stable(remoteData);
+    out.push(remoteData); status[r.id] = "shared"; updated++;
+  }
+  return { items: out, status, base: newBase, updated };
+}
+
+/** Etat d'un produit sans nouvelle lecture du catalogue commun : « local », « shared » ou « modified ». */
+export function sharedStatus(item, base) {
+  if (base[item.id] == null) return "local";
+  return stable(item) === base[item.id] ? "shared" : "modified";
 }

@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.4">
+<link rel="stylesheet" href="styles.css?v=1.5">
 </head>
 <body>
 <header class="topbar">
@@ -32,6 +32,8 @@
       </details>
     </div>
     <span class="grow"></span>
+    <span class="etat-compte" id="etatCompte">Lecture seule</span>
+    <button class="pill" id="compteBtn" type="button">Se connecter</button>
     <button class="pill" id="themeBtn" title="Changer de thème"></button>
   </div>
 </header>
@@ -45,7 +47,7 @@
       <label class="f"><span class="lbl">Étage</span><input id="etage" autocomplete="off" placeholder="ex. R+1"></label>
       <label class="f"><span class="lbl">N° du plan de coupe</span><input id="plan" autocomplete="off" placeholder="ex. 101"></label>
     </div>
-    <div class="f"><span class="lbl" id="lProd">Produit utilisé <button type="button" class="linkbtn" id="voirBiblio">Largeurs disponibles, autres produits</button></span><div id="produitSel"></div></div>
+    <div class="f"><span class="lbl" id="lProd">Produit utilisé <button type="button" class="linkbtn" id="voirBiblio">Largeurs disponibles, autres produits</button></span><div id="produitSel"></div><div id="produitFiche" class="fiche-ligne"></div></div>
 
     <div class="draw" id="dessin" role="img" aria-label="Dessin de la bande de membrane en coupe"></div>
     <p class="legend"><span><i class="k-mem"></i> membrane</span><span><i class="k-glue"></i> cordon de colle, au bout libre</span><span>Touche un tronçon pour le coller ou non</span></p>
@@ -86,7 +88,8 @@
 
   <details class="card" id="biblio">
     <summary><span>Bibliothèque de produits <span class="summary-sub" id="biblioSub"></span></span></summary>
-    <p class="hint" style="margin-top:0">Les largeurs et la longueur des rouleaux de chaque produit. Ajoute les produits d'autres fournisseurs : ils apparaissent dans la liste « Produit utilisé » et dans la commande.</p>
+    <p class="hint" style="margin-top:0">Les largeurs et la longueur des rouleaux de chaque produit, commune à l'équipe. Ajoute les produits d'autres fournisseurs, puis « Envoyer à l'équipe » (compte Index requis) pour que tout le monde les voie.</p>
+    <p class="hint partage" id="biblioEtat"></p>
     <div id="biblioListe"></div>
     <div class="actions"><button type="button" class="btn ghost" id="biblioNouveau">+ Nouveau produit</button></div>
     <form id="biblioForm" class="biblio-form hidden" autocomplete="off">
@@ -99,10 +102,10 @@
       </div>
       <label class="f"><span class="lbl">Largeurs en stock (mm), séparées par des virgules</span><input id="bLarg" inputmode="numeric" placeholder="ex. 100, 150, 200, 250, 300"></label>
       <label class="f"><span class="lbl">Largeurs sur demande (mm), facultatif</span><input id="bDem" inputmode="numeric" placeholder="ex. 1400"></label>
+      <div class="f"><span class="lbl">Fiche technique (Index), facultatif</span><div id="bFiche"></div></div>
       <div class="alertes" id="biblioErr" role="alert"></div>
       <div class="actions"><button type="submit" class="btn">Enregistrer</button><button type="button" class="btn ghost" id="biblioAnnuler">Annuler</button></div>
     </form>
-    <p class="hint"><button type="button" class="linkbtn" id="biblioReset">Rétablir les produits d'origine (Sika)</button></p>
   </details>
 </div>
 <div class="col-side">
@@ -124,8 +127,19 @@
 
 </div>
 </main>
-<footer>Membrane v1.4 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.4&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.5 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.5&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<dialog id="dConnexion" aria-labelledby="dc-titre">
+  <form id="formConnexion" method="dialog">
+    <h3 id="dc-titre">Connexion</h3>
+    <p class="hint" style="margin:0">Votre compte Index, valable partout.</p>
+    <label class="f"><span class="lbl">Email</span><input id="cEmail" name="email" type="email" autocomplete="username"></label>
+    <label class="f"><span class="lbl">Mot de passe</span><input id="cMdp" name="mdp" type="password" autocomplete="current-password"></label>
+    <p class="erreur" id="cErreur" role="alert"></p>
+    <p class="hint" style="margin:0"><span class="block">Pas encore de compte ? <a href="https://outils-hn.github.io/Index/auth" target="_blank" rel="noopener noreferrer">Créez-le dans Index</a>.</span><span class="block">Un collègue doit ensuite le valider.</span></p>
+    <div class="actions"><button type="button" class="btn ghost" id="cAnnuler">Annuler</button><button type="submit" class="btn" id="cOk">Se connecter</button></div>
+  </form>
+</dialog>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.4"></script>
+<script type="module" src="js/app.js?v=1.5"></script>
 </body>
 </html>
