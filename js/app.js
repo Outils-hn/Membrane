@@ -315,9 +315,12 @@ async function exportPdf() {
   doc.setFont("PlexSans", "normal");
   const M = 14, INK = [31, 32, 38], GREY = [112, 115, 124], LINE = [222, 222, 218], ACC = [180, 83, 9];
   const c = commande(lignes, reg);
-  doc.setFillColor(...ACC).rect(M, 11.2, 4.5, 4.2, "F");
-  doc.setDrawColor(...INK).setLineWidth(0.6).line(M + 4.5, 15.4, M + 9, 15.4).line(M + 9, 15.4, M + 12, 11.2);
-  doc.setFont("PlexSans", "bold").setFontSize(13).setTextColor(...INK).text("Membrane", M + 15, 15);
+  // Logo = celui de l'appli (bande pliee + cordon de colle), echelle 0,4 mm par unite
+  { const k = 0.4, x0 = M, y0 = 9.2, X = (v) => x0 + v * k, Y = (v) => y0 + v * k;
+    doc.setDrawColor(...INK).setLineWidth(2.2 * k).setLineCap("round").setLineJoin("round");
+    doc.lines([[9 * k, 0], [8 * k, -12 * k]], X(2), Y(17), [1, 1], "S", false);
+    doc.setFillColor(...ACC).rect(X(2.5), Y(14.5), 5 * k, 5 * k, "F"); doc.setLineCap("butt"); }
+  doc.setFont("PlexSans", "bold").setFontSize(13).setTextColor(...INK).text("Membrane", M + 12, 15);
   doc.setFont("PlexSans", "normal").setFontSize(7).setTextColor(...GREY).text(`BON DE COMMANDE · ${new Date().toLocaleDateString("fr-CH")}`, 210 - M, 15, { align: "right", charSpace: 0.3 });
   doc.setDrawColor(...INK).setLineWidth(0.4).line(M, 18.5, 210 - M, 18.5);
   let y = 26;
@@ -329,10 +332,11 @@ async function exportPdf() {
     startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain", styles: style, headStyles: head,
     head: [["Article", "Quantité", "Détail"]],
     body: [
-      ...c.articles.map((a) => [`${libelleProduit(a.produit)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`, String(a.rouleaux), `${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""} ; chutes : ${deuxPoints(a.chutes)} m`]),
+      ...c.articles.map((a) => [`${libelleProduit(a.produit)}, ${a.largeur} mm${a.mesure ? " (sur mesure)" : a.surDemande ? " (sur demande)" : ""}, rouleau de ${fmt(a.rouleauM, a.rouleauM % 1 ? 1 : 0)} m`, String(a.rouleaux), `${deuxPoints(a.net)} m de bande${a.recouvrement > 1e-9 ? ` + ${fmt(a.recouvrement, 2)} m de recouvrement` : ""}, chutes ${deuxPoints(a.chutes)} m`]),
       [`${COLLE.nom}, ${COLLE.ml} ml`, String(c.cartouches), `${deuxPoints(c.cordonM)} m de cordon (${c.cartons} carton${pluriel(c.cartons, "", "s")} de ${COLLE.parCarton})`],
     ].map((row) => row.map(pdfText)),
-    columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+    columnStyles: { 0: { cellWidth: "wrap" }, 1: { halign: "right", fontStyle: "bold", cellWidth: "wrap" }, 2: { fontSize: 8.5 } },
+    didParseCell: (d) => { if (d.section === "body" && d.column.index < 2) d.cell.styles.overflow = "visible"; },
   });
   y = doc.lastAutoTable.finalY + 8;
   titre("Détail par façade et par étage");
@@ -361,7 +365,7 @@ async function exportPdf() {
   toast("PDF téléchargé");
 }
 $("pdfBtn").addEventListener("click", () => { if (lignes.length) exportPdf(); });
-$("aboutBtn").addEventListener("click", () => toast("Membrane v1.5 · conçu et développé par Hugo N."));
+$("aboutBtn").addEventListener("click", () => toast("Membrane v1.6 · conçu et développé par Hugo N."));
 
 // ---------- Catalogue commun a l'equipe (base d'Index) : compte, lecture, envoi, retrait ----------
 // Lecture libre ; envoi et retrait : compte Index valide (meme connexion que les autres applis, meme site).

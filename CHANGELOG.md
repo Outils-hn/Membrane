@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.6 — 8 novembre 2026
+
+- Nouveauté : le bon de commande PDF tient sur une ligne par article (plus de « m » qui passe à la ligne) et son logo est le même que dans l'appli.
+
 ## 1.5 — 7 novembre 2026
 
 - Nouveauté : la bibliothèque de produits de Membrane est commune à l'équipe, comme le catalogue de Strate : chacun voit les produits ajoutés par les collègues. Avec un compte Index, on peut envoyer un produit à l'équipe ou le retirer ; sans compte, on consulte seulement. (À activer une fois : script `supabase/membrane-catalogue.sql`.)
