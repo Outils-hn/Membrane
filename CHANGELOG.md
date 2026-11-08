@@ -6,6 +6,7 @@ Chaque version qui change quelque chose de visible pour l'équipe a une puce « 
 
 - Nouveauté : la bibliothèque de produits de Membrane est commune à l'équipe, comme le catalogue de Strate : chacun voit les produits ajoutés par les collègues. Avec un compte Index, on peut envoyer un produit à l'équipe ou le retirer ; sans compte, on consulte seulement. (À activer une fois : script `supabase/membrane-catalogue.sql`.)
 - Nouveauté : on peut lier un produit à sa fiche technique dans Index ; le lien s'affiche sous le produit choisi.
+- La SikaMembran Outdoor (non vendue en Suisse) est retirée des produits d'origine.
 
 ## 1.4 — 7 novembre 2026
 

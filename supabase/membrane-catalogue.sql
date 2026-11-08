@@ -55,6 +55,5 @@ grant execute on function public.membrane_save_item(jsonb), public.membrane_dele
 -- Produits d'origine (Sika) : ajoutes seulement s'ils n'existent pas deja
 insert into public.membrane_catalogue (id, data) values
   ('outplus', '{"id": "outplus", "nom": "SikaMembran Outdoor plus", "court": "Outdoor plus", "fournisseur": "Sika", "role": "pare-pluie", "largeurs": [100, 150, 200, 250, 300, 1400], "surDemande": [1400], "rouleauM": 25}'::jsonb),
-  ('uni', '{"id": "uni", "nom": "SikaMembran Universal", "court": "Universal", "fournisseur": "Sika", "role": "pare-vapeur", "largeurs": [100, 150, 200, 250, 300, 350, 1400], "surDemande": [1400], "rouleauM": 25}'::jsonb),
-  ('out', '{"id": "out", "nom": "SikaMembran Outdoor", "court": "Outdoor", "fournisseur": "Sika", "role": "", "largeurs": [100, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000, 1200, 1400], "surDemande": [], "rouleauM": 25}'::jsonb)
+  ('uni', '{"id": "uni", "nom": "SikaMembran Universal", "court": "Universal", "fournisseur": "Sika", "role": "pare-vapeur", "largeurs": [100, 150, 200, 250, 300, 350, 1400], "surDemande": [1400], "rouleauM": 25}'::jsonb)
 on conflict (id) do nothing;

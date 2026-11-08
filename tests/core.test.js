@@ -26,7 +26,6 @@ test("largeur standard : la plus petite qui couvre la bande", () => {
   assert.equal(largeurRouleau("outplus", 220, false).largeur, 250);
   assert.equal(largeurRouleau("outplus", 250, false).largeur, 250);
   assert.equal(largeurRouleau("uni", 320, false).largeur, 350);
-  assert.equal(largeurRouleau("out", 175, false).largeur, 200);
   assert.equal(largeurRouleau("outplus", 175, false).largeur, 200);
 });
 
