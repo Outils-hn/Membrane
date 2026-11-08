@@ -6,7 +6,10 @@
 export const PRODUITS_DEFAUT = {
   outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", fournisseur: "Sika", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400], rouleauM: 25, sd: 4 },
   uni: { nom: "SikaMembran Universal", court: "Universal", fournisseur: "Sika", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400], rouleauM: 25, sd: 60 },
-  unisb: { nom: "SikaMembran Universal SB", court: "Universal SB", fournisseur: "Sika", role: "autocollante", largeurs: [100, 150, 200, 250, 350], surDemande: [250, 350], rouleauM: 25, sd: 60, autocollant: true },
+  unisb: { nom: "SikaMembran Universal SB", court: "Universal SB", fournisseur: "Sika", role: "une face autocollante", largeurs: [100, 150, 200, 250, 350], surDemande: [250, 350], rouleauM: 25, sd: 60, autocollant: "face" },
+  acplus: { nom: "SikaMembran Active+", court: "Active+", fournisseur: "Sika", role: "freine-vapeur", largeurs: [100, 150, 200, 250, 300, 1500], surDemande: [250, 300], rouleauM: 25, sd: "0,5 à 20" },
+  acsb: { nom: "SikaMembran Active SB+", court: "Active SB+", fournisseur: "Sika", role: "freine-vapeur, une face autocollante", largeurs: [100, 150, 200], surDemande: [], rouleauM: 25, sd: "0,5 à 20", autocollant: "face" },
+  acfsb: { nom: "SikaMembran Active FSB+", court: "Active FSB+", fournisseur: "Sika", role: "freine-vapeur, autocollante", largeurs: [80, 100, 150, 200, 250, 300, 350], surDemande: [], rouleauM: 25, sd: "0,5 à 20", autocollant: true },
   // La colle fait partie de la bibliotheque : cartouche de 600 ml ; la fiche Sika donne 7,5 a 10 m de membrane par cartouche
   // (10 m = cas courant, 7,5 m = cas defavorable) ; cartons de 20 ; cordon de 45 mm.
   colle444: { type: "colle", nom: "SikaBond-444 Membrane Fix", court: "SikaBond-444", fournisseur: "Sika", ml: 600, metres: 10, metresMin: 7.5, parCarton: 20, cordonMm: 45 },
@@ -35,12 +38,23 @@ export function nettoyerProduit(p) {
   };
   // Lien vers la fiche technique dans Index (id + nom de la fiche)
   if (f && typeof f.id === "string" && f.id && typeof f.name === "string") r.indexFiche = { id: f.id, name: f.name };
-  // Valeur sd (m, resistance a la vapeur d'eau, pour info) et membrane autocollante (pas de colle a compter)
-  const sdv = Number(p.sd);
-  if (Number.isFinite(sdv) && sdv > 0) r.sd = sdv;
-  if (p.autocollant === true) r.autocollant = true;
+  // Valeur sd (m, resistance a la vapeur d'eau, pour info) : un nombre ou une plage (« 0,5 à 20 »)
+  const sdv = lireSd(p.sd);
+  if (sdv !== null && sdv !== undefined) r.sd = sdv;
+  // Autocollante : true = toute la surface (pas de colle) ; « face » = une face (un cordon de colle en moins)
+  if (p.autocollant === true || p.autocollant === "face") r.autocollant = p.autocollant;
   return r;
 }
+
+/** Lit une valeur sd saisie : nombre (en m), plage « 0,5 à 20 », vide = null, illisible = undefined. */
+export function lireSd(v) {
+  const t = String(v ?? "").trim(); if (!t) return null;
+  const n = Number(t.replace(",", ".")); if (Number.isFinite(n) && n > 0) return n;
+  const m = t.match(/^(\d+(?:[.,]\d+)?)\s*(?:à|a|-|–)\s*(\d+(?:[.,]\d+)?)$/i);
+  return m ? `${m[1]} à ${m[2]}`.replace(/\./g, ",") : undefined;
+}
+/** Texte d'une valeur sd pour l'affichage. */
+export const sdTexte = (sd) => (typeof sd === "number" ? fmt(sd, sd % 1 ? 1 : 0) : String(sd));
 
 /** Une colle de la bibliotheque : contenance d'une cartouche (ml), metres de cordon par cartouche (courant et, si on veut, cas defavorable), cartouches par carton, largeur du cordon (mm). */
 function nettoyerColle(p) {
@@ -185,11 +199,12 @@ export function calculBande(b, reg = {}) {
   const alertes = [];
   if (!(run > 0)) return null;
   const roll = largeurRouleau(b.produit, dev, !!b.mesure);
-  // Membrane autocollante : pas de colle a compter, meme si des troncons sont marques « colles »
-  const auto = !!PRODUITS[b.produit]?.autocollant;
-  const collés = auto ? [] : segs.map((s, i) => ({ s, i })).filter(({ s }) => s.on && pos(s.len) > 0);
+  // Autocollante sur toute la surface : pas de colle ; sur une face : la premiere extremite collee tient par son adhesif, un cordon de moins
+  const auto = PRODUITS[b.produit]?.autocollant ?? false;
+  const marques = segs.map((s, i) => ({ s, i })).filter(({ s }) => s.on && pos(s.len) > 0);
+  const collés = auto === true ? [] : auto === "face" ? marques.slice(1) : marques;
   if (roll?.depasse) alertes.push(`La bande (${fmt(dev, 0)} mm) dépasse le plus grand rouleau de ce produit (${roll.largeur} mm).`);
-  if (!collés.length && !auto) alertes.push("Aucun tronçon n'est collé : pas de colle à prévoir.");
+  if (!marques.length && !auto) alertes.push("Aucun tronçon n'est collé : pas de colle à prévoir.");
   for (const { s, i } of collés) if (pos(s.len) < cw) alertes.push(`Le tronçon ${i + 1} (${fmt(pos(s.len), 0)} mm) est plus court que le cordon de colle (${fmt(cw, 0)} mm).`);
   const L = longueurRouleau(b.produit);
   const pc = piecesBande(run, g.marge, g.recouvrement, L);

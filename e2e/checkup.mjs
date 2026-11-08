@@ -61,12 +61,16 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   verif("Explication du calcul", /Bande dépliée : 220 mm.*2 cordons × 12,05 m = 24,1 m.*10 m par cartouche/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   verif("Dessin : 3 troncons cliquables, 2 cordons de colle", (await page.locator("#dessin .hit").count()) === 3 && (await page.locator("#dessin .glue").count()) === 2);
   await page.locator("#produitSel .sel-btn").click();
-  verif("Les produits sont proposes (3), avec leur role", (await page.locator("#produitSel .sel-pop button").count()) === 3 && /pare-pluie/.test(await txt(page, "#produitSel .sel-pop")), await txt(page, "#produitSel .sel-pop"));
+  verif("Les produits sont proposes (6), avec leur role", (await page.locator("#produitSel .sel-pop button").count()) === 6 && /pare-pluie/.test(await txt(page, "#produitSel .sel-pop")), await txt(page, "#produitSel .sel-pop"));
   await page.keyboard.press("Escape");
   verif("Echap ferme la liste", await page.locator("#produitSel .sel-pop").evaluate((el) => el.classList.contains("hidden")));
   await choisir(page, "#produitSel", "unisb");
   verif("Universal SB : sd en petit et « autocollante : pas de colle »", /sd ≈ 60 m/.test(await txt(page, "#produitFiche")) && /autocollante/.test(await txt(page, "#produitFiche")), await txt(page, "#produitFiche"));
-  verif("Universal SB : aucune colle (0 cartouche), pas de cordon dessine", (await txt(page, "#rCart")) === "0" && (await page.locator("#dessin .glue").count()) === 0 && /autocollante : pas de colle/.test(await txt(page, "#rWhy")), `${await txt(page, "#rCart")} / ${await txt(page, "#rWhy")}`);
+  verif("Universal SB (une face autocollante) : 1 cordon de moins (1 seul cordon dessine, 2 cartouches)", (await txt(page, "#rCart")) === "2" && (await page.locator("#dessin .glue").count()) === 1 && /Une face autocollante : un cordon de colle en moins\. Colle : 1 cordon/.test(await txt(page, "#rWhy")), `${await txt(page, "#rCart")} / ${await txt(page, "#rWhy")}`);
+  await choisir(page, "#produitSel", "acfsb");
+  verif("Active FSB+ (toute la surface autocollante) : aucune colle, sd en plage", (await txt(page, "#rCart")) === "0" && (await page.locator("#dessin .glue").count()) === 0 && /sd ≈ 0,5 à 20 m/.test(await txt(page, "#produitFiche")) && /pas de colle/.test(await txt(page, "#rWhy")), `${await txt(page, "#rCart")} / ${await txt(page, "#produitFiche")}`);
+  await choisir(page, "#produitSel", "acplus");
+  verif("Active+ (rien d'autocollant) : colle comptee comme Outdoor plus, sd en plage", (await txt(page, "#rCart")) === "3" && /0,5 à 20/.test(await txt(page, "#produitFiche")), `${await txt(page, "#rCart")} / ${await txt(page, "#produitFiche")}`);
   await choisir(page, "#produitSel", "outplus");
   verif("Retour a Outdoor plus : sd 4 m, colle de nouveau comptee", /sd ≈ 4 m/.test(await txt(page, "#produitFiche")) && (await txt(page, "#rCart")) === "3", await txt(page, "#produitFiche"));
   verif("Pas de lignes tant qu'on n'a rien ajoute (le message d'attente est visible)", await page.locator("#cmdPlein").evaluate((el) => el.classList.contains("hidden")) && await page.locator("#cmdVide").isVisible());
@@ -146,7 +150,7 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Sans compte : « Lecture seule »", (await txt(page, "#etatCompte")) === "Lecture seule");
   await page.click("#voirBiblio");
   verif("Le lien ouvre la bibliotheque", await page.locator("#biblio").evaluate((d) => d.open));
-  verif("3 produits Sika, partages avec l'equipe, avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 3 && (await page.locator("#biblioListe .st.ok").count()) === 3 && /1400\*/.test(await txt(page, "#biblioListe")) && /rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
+  verif("6 produits Sika, partages avec l'equipe, avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 6 && (await page.locator("#biblioListe .st.ok").count()) === 6 && /1400\*/.test(await txt(page, "#biblioListe")) && /rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
   await page.waitForFunction(() => /à jour/.test(document.getElementById("biblioEtat").textContent), null, { timeout: 4000 }).catch(() => {});
   verif("Etat du catalogue commun : a jour", /Catalogue commun à jour/.test(await txt(page, "#biblioEtat")), await txt(page, "#biblioEtat"));
   await page.click("#biblioNouveau");
@@ -163,9 +167,9 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   await page.click("#ficheResults [data-fiche-id]");
   verif("Fiche Index liee dans le formulaire", /Isover Vario Xtra : fiche technique/.test(await txt(page, "#bFiche")), await txt(page, "#bFiche"));
   await page.click("#biblioForm button[type=submit]");
-  verif("Produit ajoute : sur ce poste seulement, avec le lien vers sa fiche", (await page.locator("#biblioListe .prod").count()) === 4 && /Sur ce poste seulement/.test(await txt(page, "#biblioListe")) && (await page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1, await txt(page, "#biblioListe"));
+  verif("Produit ajoute : sur ce poste seulement, avec le lien vers sa fiche", (await page.locator("#biblioListe .prod").count()) === 7 && /Sur ce poste seulement/.test(await txt(page, "#biblioListe")) && (await page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1, await txt(page, "#biblioListe"));
   await page.locator("#produitSel .sel-btn").click();
-  verif("Il apparait dans la liste du produit utilise", (await page.locator("#produitSel .sel-pop button").count()) === 4);
+  verif("Il apparait dans la liste du produit utilise", (await page.locator("#produitSel .sel-pop button").count()) === 7);
   await page.locator('#produitSel .sel-pop button:has-text("Isover")').click();
   verif("La fiche technique est proposee sous le produit", (await page.locator('#produitFiche a[href$="?fiche=f2"]').count()) === 1, await txt(page, "#produitFiche"));
   await page.locator("#segs .row:nth-child(1) input").fill("900"); await page.locator("#segs .row:nth-child(2) input").fill("0"); await page.locator("#segs .row:nth-child(3) input").fill("0");
@@ -180,12 +184,12 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Connexion : champs obligatoires", /email et le mot de passe/.test(await txt(page, "#cErreur")), await txt(page, "#cErreur"));
   await page.fill("#cEmail", "hugo@test.fr"); await page.fill("#cMdp", "secret");
   await page.click("#cOk"); await page.waitForTimeout(500);
-  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 5 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
+  verif("Apres connexion : l'email s'affiche et le produit est envoye", (await txt(page, "#etatCompte")) === "hugo@test.fr" && Object.keys(equipe).length === 8 && /Isover Vario Xtra/.test(Object.values(equipe).map((e) => e.data.nom).join()), `${await txt(page, "#etatCompte")} / ${Object.keys(equipe).length}`);
   verif("Le produit envoye garde sa fiche et son rouleau de 50 m", Object.values(equipe).some((e) => e.data.indexFiche?.id === "f2" && e.data.rouleauM === 50));
-  verif("Le produit est maintenant « partage avec l'equipe »", (await page.locator("#biblioListe .st.ok").count()) === 4, await txt(page, "#biblioListe"));
+  verif("Le produit est maintenant « partage avec l'equipe »", (await page.locator("#biblioListe .st.ok").count()) === 7, await txt(page, "#biblioListe"));
   // Un collegue (autre poste) recoit le produit
   const autre = await ouvrir();
-  verif("Autre poste : le produit de l'equipe est la, partage, avec sa fiche", (await autre.page.locator('#produitSel .sel-btn').count()) === 1 && await (async () => { await autre.page.click("#voirBiblio"); return (await autre.page.locator("#biblioListe .prod").count()) === 4 && (await autre.page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1; })());
+  verif("Autre poste : le produit de l'equipe est la, partage, avec sa fiche", (await autre.page.locator('#produitSel .sel-btn').count()) === 1 && await (async () => { await autre.page.click("#voirBiblio"); return (await autre.page.locator("#biblioListe .prod").count()) === 7 && (await autre.page.locator('#biblioListe a.fiche-link[href$="?fiche=f2"]').count()) === 1; })());
   await autre.c.close();
   // Modifier un produit partage : « modifie ici », puis annuler mes modifications
   await page.locator('#biblioListe .prod:has(b:text-is("SikaMembran Universal")) button[data-a="edit"]').click();
@@ -195,25 +199,32 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   await page.locator('#biblioListe .prod:has(b:text-is("SikaMembran Universal")) button[data-a="revert"]').click();
   verif("Annuler mes modifications : version de l'equipe retablie", /1400\*/.test(await txt(page, '#biblioListe .prod:has(b:text-is("SikaMembran Universal"))')) && /Partagé avec l'équipe/.test(await txt(page, '#biblioListe .prod:has(b:text-is("SikaMembran Universal"))')));
   await page.reload(); await page.waitForTimeout(400); await page.click("#voirBiblio");
-  verif("Apres rechargement : 4 produits, tous partages, connexion gardee", (await page.locator("#biblioListe .prod").count()) === 4 && (await page.locator("#biblioListe .st.ok").count()) === 4 && (await txt(page, "#etatCompte")) === "hugo@test.fr");
+  verif("Apres rechargement : 7 produits, tous partages, connexion gardee", (await page.locator("#biblioListe .prod").count()) === 7 && (await page.locator("#biblioListe .st.ok").count()) === 7 && (await txt(page, "#etatCompte")) === "hugo@test.fr");
   const supp = page.locator('#biblioListe .prod:has-text("Isover") button[data-a="del"]');
   await supp.click();
-  verif("Produit utilise dans la commande : suppression refusee", (await page.locator("#biblioListe .prod").count()) === 4 && /utilisé dans la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
+  verif("Produit utilise dans la commande : suppression refusee", (await page.locator("#biblioListe .prod").count()) === 7 && /utilisé dans la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
   await page.locator("#cmdLignes button[data-a='del']").first().click();
   verif("Produit partage : le bouton dit « Retirer pour l'equipe »", /Retirer pour l'équipe/.test(await txt(page, '#biblioListe .prod:has-text("Isover") .pa')));
   await supp.click(); await supp.click(); await page.waitForTimeout(300);
-  verif("Retire pour l'equipe : disparait ici et chez l'equipe", (await page.locator("#biblioListe .prod").count()) === 3 && Object.values(equipe).some((e) => e.data.nom === "Isover Vario Xtra" && e.deleted_at), await txt(page, "#biblioListe"));
+  verif("Retire pour l'equipe : disparait ici et chez l'equipe", (await page.locator("#biblioListe .prod").count()) === 6 && Object.values(equipe).some((e) => e.data.nom === "Isover Vario Xtra" && e.deleted_at), await txt(page, "#biblioListe"));
   // ---- Colles de la bibliotheque ----
   verif("Colle d'origine listee, partagee, marquee « utilisee »", (await page.locator("#biblioColles .prod").count()) === 1 && /SikaBond-444/.test(await txt(page, "#biblioColles")) && /Partagé avec l'équipe/.test(await txt(page, "#biblioColles")) && /utilisée pour la commande/.test(await txt(page, "#biblioColles")), await txt(page, "#biblioColles"));
   await page.click("#biblioNouvelleColle");
   await page.fill("#cNom", "Colle Test"); await page.fill("#cFour", "Autre"); await page.fill("#cMl", "310"); await page.fill("#cCarton", "12"); await page.fill("#cMetres", "5"); await page.fill("#cMin", "6"); await page.fill("#cCordon", "30");
   await page.click("#colleForm button[type=submit]");
   verif("Cas defavorable plus grand que le courant refuse", /plus petit/.test(await txt(page, "#colleErr")), await txt(page, "#colleErr"));
-  await page.fill("#cMin", "4"); await page.click("#colleForm button[type=submit]");
+  await page.fill("#cMin", "4");
+  await page.click("#cFiche [data-fiche=pick]"); await page.fill("#ficheSearch", "sikamembran");
+  await page.locator("#ficheResults [data-fiche-id]").first().waitFor({ timeout: 5000 }).catch(() => {});
+  await page.click("#ficheResults [data-fiche-id]");
+  verif("Fiche Index liee dans le formulaire de la colle", /SikaMembran Outdoor plus : fiche technique/.test(await txt(page, "#cFiche")), await txt(page, "#cFiche"));
+  await page.click("#colleForm button[type=submit]");
+  verif("Colle : lien vers la fiche Index dans la bibliotheque", (await page.locator('#biblioColles a.fiche-link[href$="?fiche=f1"]').count()) === 1);
   verif("Colle ajoutee : listee, sur ce poste seulement, avec ses chiffres", (await page.locator("#biblioColles .prod").count()) === 2 && /Colle Test/.test(await txt(page, "#biblioColles")) && /Cartouche de 310 ml · couvre 5 m \(4 m au plus défavorable\) · cordon de 30 mm · 12 par carton/.test(await txt(page, "#biblioColles")) && (await page.locator("#biblioColles .st:not(.ok)").count()) === 1, await txt(page, "#biblioColles"));
   await page.locator("#reglages").evaluate((el) => { el.open = true; });
   await page.locator("#colleSel .sel-btn").click(); await page.locator('#colleSel .sel-pop button:has-text("Colle Test")').click();
   verif("Colle choisie : couverture et cordon repris, choix rapide 5 / 4", (await page.inputValue("#cartouche")) === "5" && (await page.inputValue("#cordon")) === "30" && (await page.locator("#cartSeg button").count()) === 2 && /utilisée pour la commande/.test(await txt(page, "#biblioColles .prod:has-text('Colle Test')")), `${await page.inputValue("#cartouche")} / ${await page.inputValue("#cordon")}`);
+  verif("Colle choisie : lien vers sa fiche sous le choix", (await page.locator('#colleFiche a.fiche-link[href$="?fiche=f1"]').count()) === 1);
   verif("Le calcul donne le contenu de la nouvelle colle", /310 ml/.test(await txt(page, "#rWhy")), await txt(page, "#rWhy"));
   await page.locator('#biblioColles .prod:has-text("Colle Test") button[data-a="del"]').click();
   verif("Colle choisie : suppression refusee", (await page.locator("#biblioColles .prod").count()) === 2 && /choisie pour la commande/.test(await txt(page, "#toast")), await txt(page, "#toast"));
@@ -295,7 +306,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.9", /Membrane v1\.9/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.10", /Membrane v1\.10/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
