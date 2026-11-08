@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.13 — 9 novembre 2026
+
+- Nouveauté : une faute de frappe dans le recouvrement (25 au lieu de 2,5 cm…) ou la longueur ne fige plus l'écran : les valeurs sont limitées (recouvrement 100 cm, marge 100 %, bande 500 m) et un message l'explique.
+
 ## 1.12 — 8 novembre 2026
 
 - Nouveauté : pour une membrane autocollante (ou à une face autocollante), le tronçon tenu par l'adhésif est maintenant dessiné en pointillé bleu et son bouton affiche « Collé · autocollant » : plus de confusion avec un tronçon sans colle.

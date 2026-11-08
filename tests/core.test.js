@@ -223,3 +223,14 @@ test("colles : dans la bibliotheque, au moins une, choisie pour la commande", ()
   assert.deepEqual(colles().map((x) => x.id), ["colle444"]);
   chargerCatalogue(null);
 });
+
+test("plafonds de saisie : recouvrement, marge et longueur absurdes ne font plus planter", () => {
+  const b = { produit: "outplus", longueur: "1000000000", segs: [{ len: "100", dir: "E", on: true }] };
+  const r = calculBande(b, { recouvrement: "2500", marge: "900" });
+  assert.equal(r.run, 500);
+  assert.ok(Number.isFinite(r.longueur) && r.longueur < 2000 && r.rouleaux < 200);
+  assert.equal(r.alertes.filter((a) => /limité/.test(a)).length, 3);
+  assert.equal(reglages({ recouvrement: "30" }).recouvrement, 0.3);
+  assert.equal(reglages({ recouvrement: "2500" }).recouvrement, 1);
+  assert.equal(calculBande({ ...b, longueur: "12" }, { recouvrement: "5" }).alertes.filter((a) => /limité/.test(a)).length, 0);
+});
