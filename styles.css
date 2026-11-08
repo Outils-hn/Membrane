@@ -231,3 +231,7 @@ dialog a { color: inherit; }
 .hint-sd { color: var(--muted); font-size: 12px; }
 .cb { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; }
 .cb input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+
+/* Colles de la bibliotheque */
+.colles-titre { margin: 18px 0 8px; }
+#colleSel .sel-btn { width: 100%; }

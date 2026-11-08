@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.8">
+<link rel="stylesheet" href="styles.css?v=1.9">
 </head>
 <body>
 <header class="topbar">
@@ -62,6 +62,7 @@
     </div>
     <details class="reglages" id="reglages"><summary>Réglages : colle, marge, recouvrement</summary>
       <div class="regrid">
+        <div class="f"><span class="lbl">Colle utilisée</span><div id="colleSel"></div></div>
         <label class="f"><span class="lbl">Une cartouche couvre</span><span class="withu"><input id="cartouche" inputmode="decimal" autocomplete="off"><em>m</em></span></label>
         <div class="f"><span class="lbl" id="lCart">Choix rapide</span><div class="seg deux" id="cartSeg" role="group" aria-labelledby="lCart"></div></div>
         <label class="f"><span class="lbl">Marge sur les longueurs</span><span class="withu"><input id="marge" inputmode="decimal" autocomplete="off"><em>%</em></span></label>
@@ -91,7 +92,23 @@
     <p class="hint" style="margin-top:0">Les largeurs et la longueur des rouleaux de chaque produit, commune à l'équipe. Ajoute les produits d'autres fournisseurs, puis « Envoyer à l'équipe » (compte Index requis) pour que tout le monde les voie.</p>
     <p class="hint partage" id="biblioEtat"></p>
     <div id="biblioListe"></div>
-    <div class="actions"><button type="button" class="btn ghost" id="biblioNouveau">+ Nouveau produit</button></div>
+    <h3 class="sub colles-titre">Colles</h3>
+    <div id="biblioColles"></div>
+    <div class="actions"><button type="button" class="btn ghost" id="biblioNouveau">+ Nouveau produit</button><button type="button" class="btn ghost" id="biblioNouvelleColle">+ Nouvelle colle</button></div>
+    <form id="colleForm" class="biblio-form hidden" autocomplete="off">
+      <h3 class="sub" id="colleTitre">Nouvelle colle</h3>
+      <div class="duo">
+        <label class="f"><span class="lbl">Nom de la colle</span><input id="cNom" placeholder="ex. SikaBond-444 Membrane Fix"></label>
+        <label class="f"><span class="lbl">Fournisseur</span><input id="cFour" placeholder="ex. Sika"></label>
+        <label class="f"><span class="lbl">Contenu d'une cartouche</span><span class="withu"><input id="cMl" inputmode="numeric" placeholder="600"><em>ml</em></span></label>
+        <label class="f"><span class="lbl">Cartouches par carton</span><input id="cCarton" inputmode="numeric" placeholder="20"></label>
+        <label class="f"><span class="lbl">Une cartouche couvre (courant)</span><span class="withu"><input id="cMetres" inputmode="decimal" placeholder="10"><em>m</em></span></label>
+        <label class="f"><span class="lbl">Cas défavorable, facultatif</span><span class="withu"><input id="cMin" inputmode="decimal" placeholder="ex. 7,5"><em>m</em></span></label>
+      </div>
+      <label class="f"><span class="lbl">Largeur du cordon</span><span class="withu"><input id="cCordon" inputmode="decimal" placeholder="45"><em>mm</em></span></label>
+      <div class="alertes" id="colleErr" role="alert"></div>
+      <div class="actions"><button type="submit" class="btn">Enregistrer</button><button type="button" class="btn ghost" id="colleAnnuler">Annuler</button></div>
+    </form>
     <form id="biblioForm" class="biblio-form hidden" autocomplete="off">
       <h3 class="sub" id="biblioTitre">Nouveau produit</h3>
       <div class="duo">
@@ -131,7 +148,7 @@
 
 </div>
 </main>
-<footer>Membrane v1.8 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.8&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.9 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.9&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <dialog id="dConnexion" aria-labelledby="dc-titre">
   <form id="formConnexion" method="dialog">
     <h3 id="dc-titre">Connexion</h3>
@@ -150,7 +167,7 @@
         <path d="M2 17h9l8-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M2.5 17h5" stroke="var(--accent)" stroke-width="5" stroke-linecap="butt"/>
       </svg>
-      <div><b>Membrane</b><span class="hint">Version 1.8</span></div></div>
+      <div><b>Membrane</b><span class="hint">Version 1.9</span></div></div>
     <p>Conçu et développé par Hugo N.</p>
     <p class="hint">Bande de membrane dessinée en tronçons : colle, rouleaux, chutes et bon de commande PDF par façade et par étage.</p>
     <p class="hint">Dernière mise à jour : 8 novembre 2026</p>
@@ -158,6 +175,6 @@
   </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.8"></script>
+<script type="module" src="js/app.js?v=1.9"></script>
 </body>
 </html>

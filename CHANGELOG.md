@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.9 — 8 novembre 2026
+
+- Nouveauté : la colle est dans la bibliothèque, comme les membranes : nom, fournisseur, contenu d'une cartouche, mètres couverts par cartouche, cartouches par carton, largeur du cordon. On choisit la colle dans les réglages, et on peut en ajouter d'autres, d'un autre fournisseur, et les partager avec l'équipe. (Pour partager la colle d'origine : script `supabase/membrane-colle.sql`.)
+
 ## 1.8 — 8 novembre 2026
 
 - Nouveauté : la SikaMembran Universal SB (autocollante) est dans la bibliothèque : choisie, elle ne compte aucune colle. La valeur sd (résistance à la vapeur d'eau) s'affiche en petit sous le produit et dans la bibliothèque, et chaque produit peut avoir la sienne. (À activer une fois : script `supabase/membrane-universal-sb.sql`.)

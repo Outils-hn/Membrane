@@ -7,6 +7,9 @@ export const PRODUITS_DEFAUT = {
   outplus: { nom: "SikaMembran Outdoor plus", court: "Outdoor plus", fournisseur: "Sika", role: "pare-pluie", largeurs: [100, 150, 200, 250, 300, 1400], surDemande: [1400], rouleauM: 25, sd: 4 },
   uni: { nom: "SikaMembran Universal", court: "Universal", fournisseur: "Sika", role: "pare-vapeur", largeurs: [100, 150, 200, 250, 300, 350, 1400], surDemande: [1400], rouleauM: 25, sd: 60 },
   unisb: { nom: "SikaMembran Universal SB", court: "Universal SB", fournisseur: "Sika", role: "autocollante", largeurs: [100, 150, 200, 250, 350], surDemande: [250, 350], rouleauM: 25, sd: 60, autocollant: true },
+  // La colle fait partie de la bibliotheque : cartouche de 600 ml ; la fiche Sika donne 7,5 a 10 m de membrane par cartouche
+  // (10 m = cas courant, 7,5 m = cas defavorable) ; cartons de 20 ; cordon de 45 mm.
+  colle444: { type: "colle", nom: "SikaBond-444 Membrane Fix", court: "SikaBond-444", fournisseur: "Sika", ml: 600, metres: 10, metresMin: 7.5, parCarton: 20, cordonMm: 45 },
 };
 
 /** La bibliotheque en cours (modifiable : produits d'autres fournisseurs). Remplie par chargerCatalogue. */
@@ -19,6 +22,7 @@ export const PRODUITS = {};
  */
 export function nettoyerProduit(p) {
   if (!p || typeof p !== "object" || typeof p.nom !== "string" || !p.nom.trim()) return null;
+  if (p.type === "colle") return nettoyerColle(p);
   const nums = (l) => [...new Set((Array.isArray(l) ? l : []).map(Number).filter((n) => Number.isFinite(n) && n > 0).map((n) => Math.round(n)))];
   const sd = nums(p.surDemande), std = nums(p.largeurs);
   const largeurs = [...new Set([...std, ...sd])].sort((a, b) => a - b);
@@ -38,10 +42,35 @@ export function nettoyerProduit(p) {
   return r;
 }
 
+/** Une colle de la bibliotheque : contenance d'une cartouche (ml), metres de cordon par cartouche (courant et, si on veut, cas defavorable), cartouches par carton, largeur du cordon (mm). */
+function nettoyerColle(p) {
+  const n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? x : d; };
+  const r = {
+    type: "colle", nom: p.nom.trim(), court: (typeof p.court === "string" && p.court.trim()) || p.nom.trim(),
+    fournisseur: typeof p.fournisseur === "string" ? p.fournisseur.trim() : "",
+    ml: n(p.ml, 600), metres: n(p.metres, 10), parCarton: Math.round(n(p.parCarton, 20)), cordonMm: n(p.cordonMm, 45),
+  };
+  const mn = Number(p.metresMin);
+  if (Number.isFinite(mn) && mn > 0 && mn < r.metres) r.metresMin = mn;
+  const f = p.indexFiche;
+  if (f && typeof f.id === "string" && f.id && typeof f.name === "string") r.indexFiche = { id: f.id, name: f.name };
+  return r;
+}
+/** Les produits de membrane (sans les colles) et les colles de la bibliotheque, avec leur id. */
+export const produitsMembrane = () => Object.entries(PRODUITS).filter(([, p]) => p.type !== "colle").map(([id, p]) => ({ ...p, id }));
+export const colles = () => Object.entries(PRODUITS).filter(([, p]) => p.type === "colle").map(([id, p]) => ({ ...p, id }));
+/** La colle choisie pour la commande (reg.colle) ; sinon la premiere de la bibliotheque. */
+export function colleChoisie(r = {}) {
+  const l = colles();
+  return l.find((c) => c.id === r.colle) ?? l[0] ?? { ...PRODUITS_DEFAUT.colle444, id: "colle444" };
+}
+
 export function chargerCatalogue(obj) {
   const propre = {};
   if (obj && typeof obj === "object") for (const [k, p] of Object.entries(obj)) { const n = nettoyerProduit(p); if (n) propre[String(k)] = n; }
-  const src = Object.keys(propre).length ? propre : structuredClone(PRODUITS_DEFAUT);
+  const src = Object.values(propre).some((x) => x.type !== "colle") ? propre : { ...structuredClone(PRODUITS_DEFAUT), ...Object.fromEntries(Object.entries(propre).filter(([, x]) => x.type === "colle")) };
+  // Il faut toujours au moins une colle : sinon la colle d'origine est remise (copie de ce poste)
+  if (!Object.values(src).some((x) => x.type === "colle")) src.colle444 = structuredClone(PRODUITS_DEFAUT.colle444);
   for (const k of Object.keys(PRODUITS)) delete PRODUITS[k];
   Object.assign(PRODUITS, src);
   return PRODUITS;
@@ -51,22 +80,24 @@ chargerCatalogue(null);
 /** Nom a afficher d'un produit : le fournisseur est ajoute s'il n'est pas deja dans le nom. */
 export function libelleProduit(id) {
   const p = PRODUITS[id]; if (!p) return "(produit supprime)";
+  return libelleItem(p);
+}
+export function libelleItem(p) {
   return p.fournisseur && !p.nom.toLowerCase().includes(p.fournisseur.toLowerCase()) ? `${p.nom} (${p.fournisseur})` : p.nom;
 }
 /** Longueur d'un rouleau de ce produit, en m. */
 export const longueurRouleau = (id) => PRODUITS[id]?.rouleauM ?? ROULEAU_M;
 
-/** La colle : cartouche (portion tubulaire) de 600 ml ; la fiche Sika donne 7,5 a 10 m de membrane par cartouche (10 m par defaut, 7,5 m = cas defavorable) ; cartons de 20. */
-export const COLLE = { nom: "SikaBond-444 Membrane Fix", ml: 600, metresParCartouche: 10, choixMetres: [10, 7.5], parCarton: 20, cordonMm: 45 };
-
 /** Reglages communs a la commande (textes saisis) : largeur du cordon (mm), metres de cordon par cartouche, marge (%), recouvrement (cm). */
-export const REGLAGES_DEFAUT = { cordon: String(COLLE.cordonMm), cartouche: String(COLLE.metresParCartouche), marge: "0", recouvrement: "5" };
+export const REGLAGES_DEFAUT = { cordon: String(PRODUITS_DEFAUT.colle444.cordonMm), cartouche: String(PRODUITS_DEFAUT.colle444.metres), marge: "0", recouvrement: "5" };
 /** Lit les reglages : valeurs invalides = valeurs par defaut ; marge et recouvrement peuvent valoir 0. */
 export function reglages(r = {}) {
   const ge0 = (v, d) => { const n = nombre(v); return Number.isFinite(n) && n >= 0 ? n : d; };
+  const colle = colleChoisie(r);
   return {
-    cordon: pos(r.cordon) || COLLE.cordonMm,
-    cartouche: pos(r.cartouche) || COLLE.metresParCartouche,
+    colle,
+    cordon: pos(r.cordon) || colle.cordonMm,
+    cartouche: pos(r.cartouche) || colle.metres,
     marge: ge0(r.marge, 0) / 100,
     recouvrement: ge0(r.recouvrement, 5) / 100, // en metres
   };
@@ -226,7 +257,7 @@ export function commande(lignes, reg = {}) {
   for (const c of calculees) { const f = c.ligne.facade?.trim() ?? ""; if (!groupes.has(f)) groupes.set(f, []); groupes.get(f).push(c); }
   const facades = [...groupes.keys()].sort((a, b) => (a === "") - (b === "") || triNaturel(a, b))
     .map((f) => ({ facade: f, lignes: groupes.get(f).slice().sort((a, b) => rangEtage(a.ligne.etage) - rangEtage(b.ligne.etage) || triNaturel(a.ligne.etage ?? "", b.ligne.etage ?? "")) }));
-  return { articles, cordonM, cartouches, cartons: Math.ceil(cartouches / COLLE.parCarton - 1e-9), facades, reglages: g };
+  return { articles, cordonM, cartouches, cartons: Math.ceil(cartouches / g.colle.parCarton - 1e-9), facades, reglages: g, colle: g.colle };
 }
 
 // ---------- Catalogue commun a l'equipe (Supabase d'Index) : fusion avec la copie de ce poste ----------
