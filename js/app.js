@@ -388,9 +388,9 @@ $("dApropos").addEventListener("click", (e) => { if (e.target === $("dApropos"))
 // ---------- Catalogue commun a l'equipe (base d'Index) : compte, lecture, envoi, retrait ----------
 // Lecture libre ; envoi et retrait : compte Index valide (meme connexion que les autres applis, meme site).
 // Sans reseau, Membrane continue avec la copie de ce poste. La fusion est dans core.js (testee).
-const SB_URL = "https://ngfzwfbraqkdcocdcmib.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU";
-const SESSION_KEY = "sb-ngfzwfbraqkdcocdcmib-auth-token";
+const SB_URL = "https://dtxgvwaqjmmffiiohika.supabase.co";
+const SB_KEY = "sb_publishable_yEWGxFFSLTE1lJRXnFUmpg_dMwa6LxW";
+const SESSION_KEY = "sb-dtxgvwaqjmmffiiohika-auth-token";
 const INDEX_URL = "https://outils-hn.github.io/Index";
 const CLE_BASE = "membrane.base";
 const partage = { etat: "sync", at: null };
@@ -426,7 +426,7 @@ async function sb(chemin, init = {}) {
   const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 8000);
   try {
     const tok = await jeton();
-    return await fetch(SB_URL + chemin, { ...init, headers: { apikey: SB_KEY, "Content-Type": "application/json", Authorization: "Bearer " + (tok || SB_KEY) }, signal: ctrl.signal });
+    return await fetch(SB_URL + chemin, { ...init, headers: { apikey: SB_KEY, "Content-Type": "application/json", ...(tok ? { Authorization: "Bearer " + tok } : {}) }, signal: ctrl.signal });
   } finally { clearTimeout(t); }
 }
 async function rpc(fn, args) {
@@ -516,7 +516,7 @@ function annulerModifs(id) {
 const ficheUrl = (id) => `${INDEX_URL}/?fiche=${encodeURIComponent(id)}`;
 let fichesIndex = null;
 function chargerFiches() {
-  fichesIndex ??= fetch(`${SB_URL}/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name`, { headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}` } })
+  fichesIndex ??= fetch(`${SB_URL}/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name`, { headers: { apikey: SB_KEY } })
     .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
     .then((rows) => rows.filter((r) => !r.deleted_at))
     .catch((e) => { fichesIndex = null; throw e; });

@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.11 — 8 novembre 2026
+
+- Technique : les données sont passées sur le nouveau serveur Supabase en Suisse (adresse, clé et mémoire de connexion mises à jour). Il faut se reconnecter une fois.
+
 ## 1.10 — 8 novembre 2026
 
 - Nouveauté : les SikaMembran Active+, Active SB+ et Active FSB+ sont dans la bibliothèque, avec leur valeur sd (de 0,5 à 20 m). Une membrane à une face autocollante (Active SB+, et Universal SB corrigée) compte un cordon de colle de moins ; une membrane autocollante partout (Active FSB+) n'en compte aucun. Les colles peuvent aussi être liées à une fiche Index. (À activer une fois : script `supabase/membrane-active.sql`.)

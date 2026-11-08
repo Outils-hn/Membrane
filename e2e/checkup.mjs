@@ -17,7 +17,7 @@ const FICHES = [{ id: "f1", name: "SikaMembran Outdoor plus : fiche technique", 
 let equipe = {};
 const initEquipe = () => { equipe = Object.fromEntries(Object.entries(PRODUITS_DEFAUT).map(([id, p]) => [id, { id, data: { ...p, id }, deleted_at: null }])); };
 initEquipe();
-const SB = "ngfzwfbraqkdcocdcmib.supabase.co";
+const SB = "dtxgvwaqjmmffiiohika.supabase.co";
 async function brancherEquipe(c) {
   await c.route(`https://${SB}/**`, async (route) => {
     const req = route.request(), url = req.url(), json = (o, s = 200) => route.fulfill({ status: s, contentType: "application/json", body: JSON.stringify(o) });
@@ -306,7 +306,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.10", /Membrane v1\.10/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.11", /Membrane v1\.11/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
