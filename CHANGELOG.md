@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.15 — 9 novembre 2026
+
+- Nouveauté : au téléphone, les boutons et menus font 44 px de haut et les liens du pied de page se touchent plus facilement.
+
 ## 1.14 — 9 novembre 2026
 
 - Nouveauté : les nombres se lisent et s'affichent partout de la même façon : « 1.250,5 » est compris, un nombre ambigu (« 12..5 », « 1e3 ») est refusé, les milliers s'écrivent à la suisse (1'250) et jamais de « -0 ». Les PDF et la commande suivent la même règle.
