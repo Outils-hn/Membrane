@@ -104,7 +104,9 @@ export const longueurRouleau = (id) => PRODUITS[id]?.rouleauM ?? ROULEAU_M;
 
 /** Reglages communs a la commande (textes saisis) : largeur du cordon (mm), metres de cordon par cartouche, marge (%), recouvrement (cm). */
 export const REGLAGES_DEFAUT = { cordon: String(PRODUITS_DEFAUT.colle444.cordonMm), cartouche: String(PRODUITS_DEFAUT.colle444.metres), marge: "0", recouvrement: "5" };
-/** Lit les reglages : valeurs invalides = valeurs par defaut ; marge et recouvrement peuvent valoir 0. */
+/** Plafonds de saisie : au-dela, c'est une faute de frappe (cm tapes pour des m, par exemple) qui ferait figer l'ecran. */
+export const MAX = { recouvrementCm: 100, margePct: 100, longueurM: 500 };
+/** Lit les reglages : valeurs invalides = valeurs par defaut ; marge et recouvrement peuvent valoir 0 ; valeurs trop grandes ramenees au plafond. */
 export function reglages(r = {}) {
   const ge0 = (v, d) => { const n = nombre(v); return Number.isFinite(n) && n >= 0 ? n : d; };
   const colle = colleChoisie(r);
@@ -112,8 +114,8 @@ export function reglages(r = {}) {
     colle,
     cordon: pos(r.cordon) || colle.cordonMm,
     cartouche: pos(r.cartouche) || colle.metres,
-    marge: ge0(r.marge, 0) / 100,
-    recouvrement: ge0(r.recouvrement, 5) / 100, // en metres
+    marge: Math.min(ge0(r.marge, 0), MAX.margePct) / 100,
+    recouvrement: Math.min(ge0(r.recouvrement, 5), MAX.recouvrementCm) / 100, // en metres
   };
 }
 
@@ -192,12 +194,16 @@ export function piecesBande(run, marge, recouvrement, L = ROULEAU_M) {
 /** Resultat d'une bande : largeur de rouleau, longueurs, cordon, alertes. Null si la longueur de bande manque. */
 export function calculBande(b, reg = {}) {
   const g = reglages(reg);
-  const run = pos(b.longueur);
+  const saisie = pos(b.longueur);
   const segs = b.segs ?? [];
   const cw = g.cordon;
   const dev = developpe(segs);
   const alertes = [];
-  if (!(run > 0)) return null;
+  if (!(saisie > 0)) return null;
+  const run = Math.min(saisie, MAX.longueurM);
+  if (saisie > MAX.longueurM) alertes.push(`Longueur limitée à ${MAX.longueurM} m (saisie : ${fmt(saisie, 0)} m). Vérifie l'unité (m, pas mm ni cm).`);
+  if (reg && (nombre(reg.recouvrement) > MAX.recouvrementCm)) alertes.push(`Recouvrement limité à ${MAX.recouvrementCm} cm (saisie : ${fmt(nombre(reg.recouvrement), 0)} cm). Vérifie l'unité (cm).`);
+  if (reg && (nombre(reg.marge) > MAX.margePct)) alertes.push(`Marge limitée à ${MAX.margePct} % (saisie : ${fmt(nombre(reg.marge), 0)} %).`);
   const roll = largeurRouleau(b.produit, dev, !!b.mesure);
   // Autocollante sur toute la surface : pas de colle ; sur une face : la premiere extremite collee tient par son adhesif, un cordon de moins
   const auto = PRODUITS[b.produit]?.autocollant ?? false;
