@@ -218,3 +218,11 @@ dialog a { color: inherit; }
 .mini { min-height: 36px; padding: 0 12px; border: 1.5px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--ink); font: 500 13px var(--sans); cursor: pointer; }
 .mini:hover { border-color: var(--muted); }
 .biblio-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+
+/* Fenetre « A propos » (meme principe que les autres applis) */
+.apropos { padding: 20px; display: grid; gap: 10px; }
+.apropos h3 { margin: 0; font-size: 18px; }
+.apropos p { margin: 0; }
+.about-head { display: flex; align-items: center; gap: 12px; }
+.about-head b { display: block; font-size: 18px; }
+.apropos .actions { justify-content: flex-end; }

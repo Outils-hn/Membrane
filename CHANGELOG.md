@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.7 — 8 novembre 2026
+
+- Nouveauté : un clic sur « Conçu par Hugo N. » en bas de page ouvre la même fenêtre « À propos » que dans les autres applis (nom, version, description, dernière mise à jour).
+
 ## 1.6 — 8 novembre 2026
 
 - Nouveauté : le bon de commande PDF tient sur une ligne par article (plus de « m » qui passe à la ligne) et son logo est le même que dans l'appli.
