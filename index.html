@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#B45309">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icone-192.png">
 <title>Membrane</title>
 <script>
   // Theme choisi (reglage commun aux applis), applique avant l'affichage
@@ -13,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.15">
+<link rel="stylesheet" href="styles.css?v=1.16">
 </head>
 <body>
 <header class="topbar">
@@ -149,7 +152,7 @@
 
 </div>
 </main>
-<footer>Membrane v1.15 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.15&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.16 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.16&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <dialog id="dConnexion" aria-labelledby="dc-titre">
   <form id="formConnexion" method="dialog">
     <h3 id="dc-titre">Connexion</h3>
@@ -168,7 +171,7 @@
         <path d="M2 17h9l8-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M2.5 17h5" stroke="var(--accent)" stroke-width="5" stroke-linecap="butt"/>
       </svg>
-      <div><b>Membrane</b><span class="hint">Version 1.15</span></div></div>
+      <div><b>Membrane</b><span class="hint">Version 1.16</span></div></div>
     <p>Conçu et développé par Hugo N.</p>
     <p class="hint">Bande de membrane dessinée en tronçons : colle, rouleaux, chutes et bon de commande PDF par façade et par étage.</p>
     <p class="hint">Dernière mise à jour : 8 novembre 2026</p>
@@ -176,6 +179,15 @@
   </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.15"></script>
+<script type="module" src="js/app.js?v=1.16"></script>
+<script>
+  // Hors ligne : la copie de l'appli est gardee sur le poste (voir sw.js)
+  if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then((r) => {
+      const vus = performance.getEntriesByType("resource").map((x) => x.name).filter((u) => u.startsWith(location.origin) || /fonts\.(googleapis|gstatic)\.com/.test(u));
+      r.active && r.active.postMessage({ precache: vus });
+    }).catch(() => {});
+  });
+</script>
 </body>
 </html>
