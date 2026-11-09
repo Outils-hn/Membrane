@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.18 — 9 novembre 2026
+
+- Nouveauté : au téléphone, les tableaux de résultats tiennent mieux à l'écran (boutons empilés, pourcentages sur une ligne).
+
 ## 1.17 — 9 novembre 2026
 
 - Nouveauté : dans le bandeau, l'adresse connectée est maintenant entourée de la couleur de Membrane, comme dans les autres applis.
