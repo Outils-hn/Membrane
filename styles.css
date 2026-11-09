@@ -162,6 +162,11 @@ footer a, footer button { color: inherit; background: none; border: 0; padding: 
   .duo { grid-template-columns: 1fr; }
   .row { grid-template-columns: 24px 84px 1fr 44px; } .row .tg { grid-column: 2 / 4; } .row .x { grid-column: 4; grid-row: 1; }
   .big { font-size: 42px; }
+  /* Tableaux : plus serrés, boutons d'action empilés, pourcentages sur une seule ligne */
+  .tbl th, .tbl td { padding: 8px 6px; font-size: 13px; }
+  .tbl .num { white-space: nowrap; }
+  .tbl .act { white-space: normal; }
+  .tbl .act button, .tbl .act a { display: block; margin: 0 0 4px auto; }
 }
 
 /* Menus de choix (produit, direction) : comme dans Joint */
