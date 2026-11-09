@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.17 — 9 novembre 2026
+
+- Nouveauté : dans le bandeau, l'adresse connectée est maintenant entourée de la couleur de Membrane, comme dans les autres applis.
+
 ## 1.16 — 9 novembre 2026
 
 - Nouveauté : Membrane s'installe sur le téléphone (menu du navigateur, « Ajouter à l'écran d'accueil ») et s'ouvre aussi sans réseau ; seule la connexion et le catalogue commun attendent le réseau.
