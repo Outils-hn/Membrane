@@ -43,17 +43,11 @@ function nettoyer(x) {
 }
 const sauver = () => { try { localStorage.setItem(CLE, JSON.stringify({ bande: b, lignes, reg })); } catch (e) { /* ignore */ } };
 
-// « Noter dans Check » : Check dans un autre onglet, note deja commencee par le numero du chantier choisi dans l'Accueil
-function lienNoter() {
-  const base = "https://outils-hn.github.io/Check/";
-  try { const n = String(JSON.parse(localStorage.getItem("outils-chantier-info") ?? "null")?.numero ?? "").trim(); return n ? `${base}?noter=${encodeURIComponent(`#${n} `)}` : base; } catch { return base; }
-}
 
 // ---------- Menu des applis ----------
 $("appsList").innerHTML = `<div class="apps-label">Mes outils</div>
   <a href="https://outils-hn.github.io/"><span class="sw" style="background:conic-gradient(#C2255C 0 25%,#6D4AFF 0 50%,#0E9F6E 0 75%,#FF4D00 0)"></span><span class="nm">Accueil</span><span class="rl">Toutes les applis, idées &amp; bugs</span></a>
-  <a href="https://outils-hn.github.io/#recherche" target="outils-accueil"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="nm">Rechercher</span><span class="rl">Ctrl K · toutes les applis</span></a>
-  <a href="${lienNoter()}" target="outils-check"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/><path d="m15 5 3 3"/></svg></span><span class="nm">Noter</span><span class="rl">Dans Check · avec le chantier</span></a>
+  <a href="https://outils-hn.github.io/#recherche" target="outils-accueil"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21.22-4.3-4.3"/></svg></span><span class="nm">Rechercher</span><span class="rl">Ctrl K · toutes les applis</span></a>
   <div class="apps-sep" role="separator"></div>` +
   APPLIS.map(([nom, role, c]) => `<a href="https://outils-hn.github.io/${nom}/"${nom === "Membrane" ? ' aria-current="page"' : ""}><span class="sw" style="background:${c}"></span><span class="nm">${nom}</span><span class="rl">${role.replace("&", "&amp;")}</span>${nom === "Membrane" ? '<span class="ck" aria-hidden="true">✓</span>' : ""}</a>`).join("");
 document.addEventListener("click", (e) => { const m = $("appsMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
