@@ -52,8 +52,8 @@ function lienNoter() {
 // ---------- Menu des applis ----------
 $("appsList").innerHTML = `<div class="apps-label">Mes outils</div>
   <a href="https://outils-hn.github.io/"><span class="sw" style="background:conic-gradient(#C2255C 0 25%,#6D4AFF 0 50%,#0E9F6E 0 75%,#FF4D00 0)"></span><span class="nm">Accueil</span><span class="rl">Toutes les applis, idées &amp; bugs</span></a>
-  <a href="https://outils-hn.github.io/#recherche" target="outils-accueil"><span class="sw" style="background:#5D6068"></span><span class="nm">Rechercher</span><span class="rl">Ctrl K · toutes les applis</span></a>
-  <a href="${lienNoter()}" target="outils-check"><span class="sw" style="background:#5D6068"></span><span class="nm">Noter</span><span class="rl">Dans Check · avec le chantier</span></a>
+  <a href="https://outils-hn.github.io/#recherche" target="outils-accueil"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="nm">Rechercher</span><span class="rl">Ctrl K · toutes les applis</span></a>
+  <a href="${lienNoter()}" target="outils-check"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/><path d="m15 5 3 3"/></svg></span><span class="nm">Noter</span><span class="rl">Dans Check · avec le chantier</span></a>
   <div class="apps-sep" role="separator"></div>` +
   APPLIS.map(([nom, role, c]) => `<a href="https://outils-hn.github.io/${nom}/"${nom === "Membrane" ? ' aria-current="page"' : ""}><span class="sw" style="background:${c}"></span><span class="nm">${nom}</span><span class="rl">${role.replace("&", "&amp;")}</span>${nom === "Membrane" ? '<span class="ck" aria-hidden="true">✓</span>' : ""}</a>`).join("");
 document.addEventListener("click", (e) => { const m = $("appsMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
@@ -707,3 +707,30 @@ lignesTroncons(); maj(); afficherCommande();
 
 // Ctrl+K : ouvre la recherche de l'Accueil dans un autre onglet (on ne quitte pas ce qu'on est en train de faire)
 document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); window.open("https://outils-hn.github.io/#recherche", "outils-accueil"); } });
+
+// ---------- Touche « ? » : liste des raccourcis clavier ----------
+(function raccourcisAide() {
+  const lignes = [
+    [["Ctrl", "K"], "Rechercher dans toutes les applis (ouvre l'Accueil)"],
+    [["Échap"], "Fermer une fenêtre ou un menu"],
+    [["Entrée"], "Valider la fenêtre ou le champ en cours"],
+    [["Tab"], "Champ suivant (Maj + Tab : précédent)"],
+    [["?"], "Afficher cette liste"],
+  ];
+  const kbd = (t) => `<kbd style="border:1px solid var(--line-strong,#d4d4cf);border-radius:4px;padding:1px 6px;font:12px ui-monospace,monospace;background:var(--sunk,#f3f3f0)">${t}</kbd>`;
+  const d = document.createElement("dialog");
+  d.id = "dRaccourcis";
+  d.setAttribute("aria-labelledby", "dr-titre");
+  d.innerHTML = `<div class="apropos" style="padding:20px"><h3 id="dr-titre" style="margin:0 0 10px">Raccourcis clavier</h3>${lignes.map(([t, x]) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line,#e8e8e5)"><span>${x}</span><span style="display:flex;gap:4px;flex:none">${t.map(kbd).join("")}</span></div>`).join("")}<form method="dialog" style="margin-top:12px;text-align:right"><button class="btn">Fermer</button></form></div>`;
+  document.body.appendChild(d);
+  const menu = document.querySelector(".apps-menu");
+  if (menu) {
+    menu.insertAdjacentHTML("beforeend", `<div class="apps-sep" role="separator"></div><a href="#raccourcis" id="raccourcisBtn"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"/></svg></span><span class="nm">Raccourcis</span><span class="rl">Touches du clavier · ?</span></a>`);
+    document.getElementById("raccourcisBtn").addEventListener("click", (e) => { e.preventDefault(); const m = document.getElementById("appsMenu") || menu.closest("details"); if (m) m.open = false; d.showModal(); });
+  }
+  document.addEventListener("keydown", (e) => {
+    const t = e.target;
+    if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable || document.querySelector("dialog[open]")) return;
+    e.preventDefault(); d.showModal();
+  });
+})();

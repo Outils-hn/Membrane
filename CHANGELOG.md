@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.21 — 10 novembre 2026
+
+- Nouveauté : la touche ? (ou « Raccourcis » en bas du menu des applis) affiche les raccourcis clavier de l'appli. Les icônes Rechercher et Noter du menu de Joint, Membrane et Strate sont maintenant comme dans les autres applis.
+
 ## 1.20 — 10 novembre 2026
 
 - Nouveauté : le menu des applis propose « Noter » : ouvre Check dans un nouvel onglet avec une note déjà commencée par le numéro du chantier choisi dans l'Accueil.
