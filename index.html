@@ -12,11 +12,11 @@
   try { const t = localStorage.getItem("outils-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <meta name="description" content="Membranes d'étanchéité : la colle et les rouleaux à commander">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18h10l6-12' fill='none' stroke='%231.2326' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M3 18h6' stroke='%23B45309' stroke-width='6'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 18h10l6-12' fill='none' stroke='%231.2426' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M3 18h6' stroke='%23B45309' stroke-width='6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=1.23">
+<link rel="stylesheet" href="styles.css?v=1.24">
 </head>
 <body>
 <header class="topbar">
@@ -36,6 +36,7 @@
     </div>
     <span class="grow"></span>
     <span class="etat-compte" id="etatCompte">Lecture seule</span>
+    <button class="pill" id="rechercheBtn" type="button" title="Rechercher dans toutes les applis (Ctrl+K)" aria-label="Rechercher dans toutes les applis (Ctrl+K)">Rechercher <kbd style="font:11px ui-monospace,monospace;color:var(--muted);border:1px solid var(--line-strong,#d4d4cf);border-radius:4px;padding:0 4px;margin-left:4px">Ctrl K</kbd></button>
     <button class="pill" id="compteBtn" type="button">Se connecter</button>
     <button class="pill" id="themeBtn" title="Changer de thème"></button>
   </div>
@@ -152,7 +153,7 @@
 
 </div>
 </main>
-<footer>Membrane v1.23 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.23&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Membrane v1.24 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="https://outils-hn.github.io/?app=Membrane&amp;v=1.24&amp;page=%2FMembrane%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <dialog id="dConnexion" aria-labelledby="dc-titre">
   <form id="formConnexion" method="dialog">
     <h3 id="dc-titre">Connexion</h3>
@@ -171,7 +172,7 @@
         <path d="M2 17h9l8-12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M2.5 17h5" stroke="var(--accent)" stroke-width="5" stroke-linecap="butt"/>
       </svg>
-      <div><b>Membrane</b><span class="hint">Version 1.23</span></div></div>
+      <div><b>Membrane</b><span class="hint">Version 1.24</span></div></div>
     <p>Conçu et développé par Hugo N.</p>
     <p class="hint">Bande de membrane dessinée en tronçons : colle, rouleaux, chutes et bon de commande PDF par façade et par étage.</p>
     <p class="hint">Dernière mise à jour : 8 novembre 2026</p>
@@ -179,7 +180,7 @@
   </div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
-<script type="module" src="js/app.js?v=1.23"></script>
+<script type="module" src="js/app.js?v=1.24"></script>
 <script>
   // Hors ligne : la copie de l'appli est gardee sur le poste (voir sw.js)
   if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", () => {
