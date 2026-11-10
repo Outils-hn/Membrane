@@ -464,7 +464,8 @@ async function rpc(fn, args) {
 // Etat du compte dans le bandeau
 function afficherCompte() {
   const s = lireSession();
-  $("etatCompte").textContent = s ? (s.user?.email || "") : "Lecture seule";
+  $("etatCompte").textContent = s ? (nomAffiche(s.user) || s.user?.email || "") : "Lecture seule";
+  $("etatCompte").title = s ? (s.user?.email || "") : "";
   $("etatCompte").classList.toggle("on", !!s);
   $("compteBtn").textContent = s ? "Se déconnecter" : "Se connecter";
 }
@@ -737,3 +738,16 @@ document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.
 
 // Bouton « Rechercher » du bandeau : meme recherche que Ctrl+K (ouvre l'Accueil dans un autre onglet)
 document.getElementById("rechercheBtn")?.addEventListener("click", () => window.open("https://outils-hn.github.io/#recherche", "outils-accueil"));
+
+/** « Prénom NOM » d'apres les infos du compte (prenom et nom saisis a la creation), sinon vide : on affiche alors l'email. */
+function nomAffiche(u) {
+  const m = (u && u.user_metadata) || {};
+  const txt = (v) => (typeof v === "string" ? v.trim() : "");
+  const maj = (s) => s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_x, a, b) => a + b.toUpperCase());
+  let prenom = txt(m.first_name), nom = txt(m.last_name);
+  if (!prenom || !nom) {
+    const mots = txt(m.display_name).split(/\s+/).filter(Boolean);
+    if (mots.length >= 2) { prenom = mots.slice(0, -1).join(" "); nom = mots[mots.length - 1]; }
+  }
+  return prenom && nom ? `${maj(prenom)} ${nom.toLocaleUpperCase("fr")}` : "";
+}
