@@ -1,0 +1,104 @@
+OK     Titre Membrane
+OK     Trois troncons de depart
+OK     Bande depliee 220 mm : rouleau de 250 mm (rouleau de 250 mm)
+OK     2 cordons de 12,05 m (recouvrement 5 cm) = 24,1 m : 3 cartouches de 10 m (3)
+OK     Un rouleau
+OK     Explication du calcul (Bande dépliée : 220 mm, donc rouleau de 250 mm en Outdoor plus. Longueur : 12,00 m + recouvrement 5 cm = 12,05 m. Colle : 2 cordons × 12,05 m = 24,1 m, à 10 m par cartouche de 600 ml.)
+OK     Dessin : 3 troncons cliquables, 2 cordons de colle
+OK     Les produits sont proposes (6), avec leur role (SikaMembran Outdoor plus pare-pluie SikaMembran Universal pare-vapeur SikaMembran Universal SB une face autocollante SikaMembran Active+ freine-vapeur SikaMembran Active SB+ freine-vapeur, une face autocollante SikaMembran Active FSB+ freine-vapeur, autocollante)
+OK     Echap ferme la liste
+OK     Universal SB : sd en petit et « autocollante : pas de colle » (sd ≈ 60 m · une face autocollante : un cordon de colle en moins)
+OK     Universal SB (une face autocollante) : 1 cordon de moins (1 seul cordon dessine, 2 cartouches) (2 / Bande dépliée : 220 mm, donc rouleau de 250 mm en Universal SB. Longueur : 12,00 m + recouvrement 5 cm = 12,05 m. Une face autocollante : un cordon de colle en moins. Colle : 1 cordon × 12,05 m = 12,1 m, à 10 m par cartouche de 600 ml.)
+OK     Universal SB : le tronçon tenu par l'autocollant est en pointillé bleu, bouton « Collé · autocollant » (1 / 1 mm → droite Collé · autocollant × 2 mm ↘ bas-droite Libre × 3 mm → droite Collé ×)
+OK     Active FSB+ (toute la surface autocollante) : aucune colle, sd en plage (0 / sd ≈ 0,5 à 20 m · autocollante : pas de colle)
+OK     Active FSB+ : tous les tronçons collés sont en pointillé bleu (2)
+OK     Active+ (rien d'autocollant) : colle comptee comme Outdoor plus, sd en plage (3 / sd ≈ 0,5 à 20 m)
+OK     Retour a Outdoor plus : sd 4 m, colle de nouveau comptee (sd ≈ 4 m)
+OK     Pas de lignes tant qu'on n'a rien ajoute (le message d'attente est visible)
+OK     Toucher le pont le colle : 3 cordons, 36,15 m, 4 cartouches (3 / 4)
+OK     Le bouton du troncon passe a « Collé »
+OK     Le bouton le remet en « Libre »
+OK     Un 4e troncon apparait
+OK     Largeur depliee 250 : toujours un rouleau de 250 (rouleau de 250 mm)
+OK     Supprimer revient a 3 troncons
+OK     Direction choisie : affichee sur le bouton (↗ haut-droite)
+OK     Changer la direction redessine sans erreur
+OK     Impossible de supprimer le dernier troncon
+OK     Bande de 175 mm en standard : rouleau de 200 mm (rouleau de 200 mm)
+OK     Sur mesure : rouleau de 175 mm (rouleau de 175 mm (sur mesure))
+OK     L'explication parle de coupe a 175 mm (Bande dépliée : 175 mm, donc coupée à 175 mm en Outdoor plus. Longueur : 12,00 m + recouvrement 5 cm = 12,05 m. Colle : 2 cordons × 12,05 m = 24,1 m, à 10 m par cartouche de 600 ml.)
+OK     Universal : meme largeur de 200 mm
+OK     Universal 320+25 = 345 mm : rouleau de 350 mm (rouleau de 350 mm)
+OK     Outdoor plus 345 mm : 1400 sur demande (rouleau de 1400 mm (sur demande))
+OK     Bande trop large : alerte (La bande (1'525 mm) dépasse le plus grand rouleau de ce produit (1400 mm). Le tronçon 3 (15 mm) est plus court que le cordon de colle (45 mm).)
+OK     Troncon colle plus court que le cordon : alerte (Le tronçon 1 (20 mm) est plus court que le cordon de colle (45 mm). Le tronçon 3 (15 mm) est plus court que le cordon de colle (45 mm).)
+OK     Longueur vide : pas de resultat, ajout impossible
+OK     30 m : 2 rouleaux (2)
+OK     Reglages par defaut : 10 m, marge 0 %, recouvrement 5 cm
+OK     Le choix 10 m est indique comme courant (10 m courant 7,5 m défavorable)
+OK     Cas defavorable 7,5 m : 4 cartouches (4)
+OK     Marge 10 % : explication mise a jour (Bande dépliée : 220 mm, donc rouleau de 250 mm en Outdoor plus. Longueur : 12,00 m + marge 10 % + recouvrement 5 cm = 13,25 m. Colle : 2 cordons × 13,25 m = 26,5 m, à 10 m par cartouche de 600 ml.)
+OK     Sans marge ni recouvrement : 12,00 m, 24,0 m de cordon (Bande dépliée : 220 mm, donc rouleau de 250 mm en Outdoor plus. Longueur : 12,00 m = 12,00 m. Colle : 2 cordons × 12,00 m = 24,0 m, à 10 m par cartouche de 600 ml.)
+OK     Les reglages sont gardes apres rechargement
+OK     Plus de phrase d'accroche dans le bandeau
+OK     Sans compte : « Lecture seule »
+OK     Le lien ouvre la bibliotheque
+OK     6 produits Sika, partages avec l'equipe, avec leurs largeurs (SikaMembran Outdoor plus Sika pare-pluie Partagé avec l'équipe 100 150 200 250 300 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 4 m Modifier Retirer pour l'équipe SikaMembran Universal Sika pare-vapeur Partagé avec l'équipe 100 150 200 250 300 350 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m Modifier Retirer pour l'équipe SikaMembran Universal SB Sika une face autocollante Partagé avec l'équipe 100 150 200 250* 350* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active+ Sika freine-vapeur Partagé avec l'équipe 100 150 200 250* 300* 1500 Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 0,5 à 20 m Modifier Retirer pour l'équipe SikaMembran Active SB+ Sika freine-vapeur, une face autocollante Partagé avec l'équipe 100 150 200 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active FSB+ Sika freine-vapeur, autocollante Partagé avec l'équipe 80 100 150 200 250 300 350 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · autocollante Modifier Retirer pour l'équipe)
+OK     Etat du catalogue commun : a jour (Catalogue commun à jour (08:11). Actualiser)
+OK     Nom obligatoire (Donne un nom au produit.)
+OK     Largeur illisible refusee (Les largeurs sont des nombres en mm, séparés par des virgules.)
+OK     Recherche d'une fiche dans Index (Isover Vario Xtra : fiche technique ISOVER · MEMBRANES)
+OK     Fiche Index liee dans le formulaire (📄 Isover Vario Xtra : fiche technique ↗ Retirer)
+OK     Produit ajoute : sur ce poste seulement, avec le lien vers sa fiche (SikaMembran Outdoor plus Sika pare-pluie Partagé avec l'équipe 100 150 200 250 300 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 4 m Modifier Retirer pour l'équipe SikaMembran Universal Sika pare-vapeur Partagé avec l'équipe 100 150 200 250 300 350 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m Modifier Retirer pour l'équipe SikaMembran Universal SB Sika une face autocollante Partagé avec l'équipe 100 150 200 250* 350* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active+ Sika freine-vapeur Partagé avec l'équipe 100 150 200 250* 300* 1500 Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 0,5 à 20 m Modifier Retirer pour l'équipe SikaMembran Active SB+ Sika freine-vapeur, une face autocollante Partagé avec l'équipe 100 150 200 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active FSB+ Sika freine-vapeur, autocollante Partagé avec l'équipe 80 100 150 200 250 300 350 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · autocollante Modifier Retirer pour l'équipe Isover Vario Xtra Saint-Gobain pare-vapeur Sur ce poste seulement 1000 1500 2000* Largeurs en mm (* sur demande) · rouleaux de 50 m · 📄 Isover Vario Xtra : fiche technique ↗ Modifier Se connecter pour envoyer Supprimer)
+OK     Il apparait dans la liste du produit utilise
+OK     La fiche technique est proposee sous le produit (📄 Isover Vario Xtra : fiche technique ↗)
+OK     Largeur 1000 en stock, un seul rouleau de 50 m (1 rouleau de 1000 mm)
+OK     La commande indique le fournisseur et le rouleau de 50 m (Article Quantité Détail Isover Vario Xtra (Saint-Gobain), 1000 mm, rouleau de 50 m 1 30,0 m de bande + 0,05 m de recouvrement ; chutes : 19,9 m SikaBond-444 Membrane Fix, 600 ml 4 30,1 m de cordon, à 10 m par cartouche (1 carton de 20))
+OK     Envoyer sans compte : la fenetre de connexion s'ouvre
+OK     Connexion : champs obligatoires (Saisis l'email et le mot de passe.)
+OK     Apres connexion : l'email s'affiche et le produit est envoye (hugo@test.fr / 8)
+OK     Le produit envoye garde sa fiche et son rouleau de 50 m
+OK     Le produit est maintenant « partage avec l'equipe » (SikaMembran Outdoor plus Sika pare-pluie Partagé avec l'équipe 100 150 200 250 300 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 4 m Modifier Retirer pour l'équipe SikaMembran Universal Sika pare-vapeur Partagé avec l'équipe 100 150 200 250 300 350 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m Modifier Retirer pour l'équipe SikaMembran Universal SB Sika une face autocollante Partagé avec l'équipe 100 150 200 250* 350* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active+ Sika freine-vapeur Partagé avec l'équipe 100 150 200 250* 300* 1500 Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 0,5 à 20 m Modifier Retirer pour l'équipe SikaMembran Active SB+ Sika freine-vapeur, une face autocollante Partagé avec l'équipe 100 150 200 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active FSB+ Sika freine-vapeur, autocollante Partagé avec l'équipe 80 100 150 200 250 300 350 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · autocollante Modifier Retirer pour l'équipe Isover Vario Xtra Saint-Gobain pare-vapeur Partagé avec l'équipe 1000 1500 2000* Largeurs en mm (* sur demande) · rouleaux de 50 m · 📄 Isover Vario Xtra : fiche technique ↗ Modifier Retirer pour l'équipe)
+OK     Autre poste : le produit de l'equipe est la, partage, avec sa fiche
+OK     Modifier un produit partage : « Modifié ici » et plus de 1400 (SikaMembran Universal Sika pare-vapeur Modifié ici, pas encore envoyé 100 150 200 250 300 350 Largeurs en mm · rouleaux de 25 m · sd ≈ 60 m Modifier Envoyer à l'équipe Annuler mes modifications Retirer pour l'équipe)
+OK     Annuler mes modifications : version de l'equipe retablie
+OK     Apres rechargement : 7 produits, tous partages, connexion gardee
+OK     Produit utilise dans la commande : suppression refusee (Ce produit est utilisé dans la commande : retire d'abord ces lignes)
+OK     Produit partage : le bouton dit « Retirer pour l'equipe »
+OK     Retire pour l'equipe : disparait ici et chez l'equipe (SikaMembran Outdoor plus Sika pare-pluie Partagé avec l'équipe 100 150 200 250 300 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 4 m Modifier Retirer pour l'équipe SikaMembran Universal Sika pare-vapeur Partagé avec l'équipe 100 150 200 250 300 350 1400* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m Modifier Retirer pour l'équipe SikaMembran Universal SB Sika une face autocollante Partagé avec l'équipe 100 150 200 250* 350* Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 60 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active+ Sika freine-vapeur Partagé avec l'équipe 100 150 200 250* 300* 1500 Largeurs en mm (* sur demande) · rouleaux de 25 m · sd ≈ 0,5 à 20 m Modifier Retirer pour l'équipe SikaMembran Active SB+ Sika freine-vapeur, une face autocollante Partagé avec l'équipe 100 150 200 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · une face autocollante Modifier Retirer pour l'équipe SikaMembran Active FSB+ Sika freine-vapeur, autocollante Partagé avec l'équipe 80 100 150 200 250 300 350 Largeurs en mm · rouleaux de 25 m · sd ≈ 0,5 à 20 m · autocollante Modifier Retirer pour l'équipe)
+OK     Colle d'origine listee, partagee, marquee « utilisee » (SikaBond-444 Membrane Fix Sika Partagé avec l'équipe Cartouche de 600 ml · couvre 10 m (7,5 m au plus défavorable) · cordon de 45 mm · 20 par carton · utilisée pour la commande Modifier Retirer pour l'équipe)
+OK     Cas defavorable plus grand que le courant refuse (Le cas défavorable doit être plus petit que le cas courant (ou laisse vide).)
+OK     Fiche Index liee dans le formulaire de la colle (📄 SikaMembran Outdoor plus : fiche technique ↗ Retirer)
+OK     Colle : lien vers la fiche Index dans la bibliotheque
+OK     Colle ajoutee : listee, sur ce poste seulement, avec ses chiffres (SikaBond-444 Membrane Fix Sika Partagé avec l'équipe Cartouche de 600 ml · couvre 10 m (7,5 m au plus défavorable) · cordon de 45 mm · 20 par carton · utilisée pour la commande Modifier Retirer pour l'équipe Colle Test Autre Sur ce poste seulement Cartouche de 310 ml · couvre 5 m (4 m au plus défavorable) · cordon de 30 mm · 12 par carton · 📄 SikaMembran Outdoor plus : fiche technique ↗ Modifier Envoyer à l'équipe Supprimer)
+OK     Colle choisie : couverture et cordon repris, choix rapide 5 / 4 (5 / 30)
+OK     Colle choisie : lien vers sa fiche sous le choix
+OK     Le calcul donne le contenu de la nouvelle colle (Bande dépliée : 220 mm, donc rouleau de 250 mm en Outdoor plus. Longueur : 12,00 m + recouvrement 5 cm = 12,05 m. Colle : 2 cordons × 12,05 m = 24,1 m, à 5 m par cartouche de 310 ml.)
+OK     Colle choisie : suppression refusee (Cette colle est choisie pour la commande : choisis-en une autre dans les réglages)
+OK     Retour a la colle d'origine : 10 m, 45 mm
+OK     Colle supprimee (confirmation en deux clics)
+OK     Derniere colle : impossible de la supprimer
+OK     Se deconnecter : retour en lecture seule
+OK     La commande apparait apres le premier ajout
+OK     Apres l'ajout, la bande repart d'un dessin neuf en gardant facade et etage
+OK     Facades classees (Est avant Nord) (Façade Est|Façade Nord)
+OK     Etages classes (R+1 avant R+2) (R+1|R+2)
+OK     Total : 2 rouleaux de 250 mm, recouvrement et chutes comptes (Article Quantité Détail SikaMembran Outdoor plus, 250 mm, rouleau de 25 m 2 32,5 m de bande + 0,15 m de recouvrement ; chutes : 17,3 m SikaBond-444 Membrane Fix, 600 ml 7 65,3 m de cordon, à 10 m par cartouche (1 carton de 20))
+OK     Total colle : 7 cartouches (65,3 m a 10 m) (Article Quantité Détail SikaMembran Outdoor plus, 250 mm, rouleau de 25 m 2 32,5 m de bande + 0,15 m de recouvrement ; chutes : 17,3 m SikaBond-444 Membrane Fix, 600 ml 7 65,3 m de cordon, à 10 m par cartouche (1 carton de 20))
+OK     Modifier recharge la ligne dans l'editeur
+OK     Mise a jour : 26 m + 12 m + 12 m, la piece de 1,1 m ne tient pas dans le reste : 3 rouleaux (Article Quantité Détail SikaMembran Outdoor plus, 250 mm, rouleau de 25 m 3 50,0 m de bande + 0,20 m de recouvrement ; chutes : 24,8 m SikaBond-444 Membrane Fix, 600 ml 11 100,4 m de cordon, à 10 m par cartouche (1 carton de 20))
+OK     Supprimer enleve une ligne
+OK     La commande est retrouvee apres rechargement
+OK     Vider demande une confirmation
+OK     Deuxieme clic : commande videe
+OK     Copie Excel : lignes separees par des tabulations (Façade→Étage→Plan→Produit→Largeur (mm)→Longueur (m)→Avec marge et recouvrement (m)→Tronçons collés→Cordon (m)⏎Nord→R+1→101→SikaMembran Outdoor plus→250→12,0→12,)
+OK     PDF telecharge, nom date (Commande membranes - 2026-11-10.pdf)
+OK     Le PDF n'est pas vide
+OK     Telephone : pas de debordement horizontal
+OK     Telephone : pas de debordement avec la commande
+OK     Theme sombre applique
+OK     Pied de page : version 1.18 (Membrane v1.18 · Conçu par Hugo N. · 2026 · Suggestion / bug)
+OK     Clic sur la signature : fenetre « À propos » (nom, version) (À propos Membrane Version 1.18 Conçu et développé par Hugo N. Bande de membrane dessinée en tronçons : colle, rouleaux, chutes et bon de commande PDF par façade et par étage. Dernière mise à jour : 8 novembre 2026 Fermer)
+OK     La fenetre se ferme
+OK     Le menu liste Membrane et les autres applis (MES OUTILS Accueil Toutes les applis, idées & bugs Access Annuaire fournisseurs Check Notes & tâches Format Débit de panneaux Index Fiches techniques Joint Dilatation et joints Linear Mise en barre Ma)
+OK     Dix applis et l'Accueil dans le menu
