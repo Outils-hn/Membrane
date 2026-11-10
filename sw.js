@@ -1,7 +1,7 @@
 // Service worker de Membrane : l'appli s'ouvre aussi sans reseau (bureau, toit, sous-sol).
 // En ligne : on prend toujours la version la plus recente, qu'on garde en copie. Hors ligne : on sert la copie.
 // Les echanges avec la base (Supabase) ne passent jamais par ici.
-const VERSION = "1.25";
+const VERSION = "1.26";
 const CACHE = "membrane-" + VERSION;
 const POLICES = ["fonts.googleapis.com", "fonts.gstatic.com"];
 const FIXES = ["./", "index.html", "icone-192.png", "icone-512.png", "vendor/jspdf.umd.min.js", "vendor/jspdf.plugin.autotable.min.js", "vendor/fonts/IBMPlexSans-SemiBold.ttf", "vendor/fonts/IBMPlexSans-LICENSE.txt", "vendor/fonts/IBMPlexSans-Regular.ttf"];
