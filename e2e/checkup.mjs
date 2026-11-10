@@ -313,7 +313,7 @@ await step("Pied de page et menu des applis", async () => {
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
   verif("Le menu liste Membrane et les autres applis", /Membrane Étanchéité ✓/.test(menu) && /Joint Dilatation et joints/.test(menu), menu.slice(0, 200));
-  verif("Dix applis et l'Accueil dans le menu", (await page.locator("#appsList a").count()) === 11);
+  verif("Dix applis et l'Accueil dans le menu", (await page.locator("#appsList a").count()) === 12);
   await c.close();
 });
 
