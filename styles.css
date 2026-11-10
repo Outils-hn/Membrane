@@ -253,3 +253,5 @@ dialog a { color: inherit; }
   footer a, footer button, .linkish, .help { position: relative; }
   footer a::after, footer button::after, .linkish::after, .help::after { content: ""; position: absolute; inset: -14px -8px; }
 }
+
+@media (max-width: 640px) { #rechercheBtn { display: none; } }
