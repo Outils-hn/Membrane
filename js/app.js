@@ -724,11 +724,8 @@ document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.
   d.setAttribute("aria-labelledby", "dr-titre");
   d.innerHTML = `<div class="apropos" style="padding:20px"><h3 id="dr-titre" style="margin:0 0 10px">Raccourcis clavier</h3>${lignes.map(([t, x]) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line,#e8e8e5)"><span>${x}</span><span style="display:flex;gap:4px;flex:none">${t.map(kbd).join("")}</span></div>`).join("")}<form method="dialog" style="margin-top:12px;text-align:right"><button class="btn">Fermer</button></form></div>`;
   document.body.appendChild(d);
-  const menu = document.querySelector(".apps-menu");
-  if (menu) {
-    menu.insertAdjacentHTML("beforeend", `<div class="apps-sep" role="separator"></div><a href="#raccourcis" id="raccourcisBtn"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"/></svg></span><span class="nm">Raccourcis</span><span class="rl">Touches du clavier · ?</span></a>`);
-    document.getElementById("raccourcisBtn").addEventListener("click", (e) => { e.preventDefault(); const m = document.getElementById("appsMenu") || menu.closest("details"); if (m) m.open = false; d.showModal(); });
-  }
+  const btn = document.getElementById("raccourcisBtn");
+  if (btn) btn.addEventListener("click", () => d.showModal());
   document.addEventListener("keydown", (e) => {
     const t = e.target;
     if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable || document.querySelector("dialog[open]")) return;
