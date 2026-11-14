@@ -464,7 +464,7 @@ async function rpc(fn, args) {
 // Etat du compte dans le bandeau
 function afficherCompte() {
   const s = lireSession();
-  $("etatCompte").textContent = s ? (nomAffiche(s.user) || s.user?.email || "") : "Lecture seule";
+  $("etatCompte").textContent = s ? (nomAffiche(s.user) || s.user?.email || "") : "";
   $("etatCompte").title = s ? (s.user?.email || "") : "";
   $("etatCompte").classList.toggle("on", !!s);
   $("compteBtn").textContent = s ? "Se déconnecter" : "Se connecter";

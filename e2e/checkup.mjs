@@ -149,7 +149,7 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   initEquipe();
   const { c, page } = await ouvrir();
   verif("Plus de phrase d'accroche dans le bandeau", (await page.locator(".tagline").count()) === 0);
-  verif("Sans compte : « Lecture seule »", (await txt(page, "#etatCompte")) === "Lecture seule");
+  verif("Sans compte : pas de « Lecture seule »", (await txt(page, "#etatCompte")) === "");
   await page.click("#voirBiblio");
   verif("Le lien ouvre la bibliotheque", await page.locator("#biblio").evaluate((d) => d.open));
   verif("6 produits Sika, partages avec l'equipe, avec leurs largeurs", (await page.locator("#biblioListe .prod").count()) === 6 && (await page.locator("#biblioListe .st.ok").count()) === 6 && /1400\*/.test(await txt(page, "#biblioListe")) && /rouleaux de 25 m/.test(await txt(page, "#biblioListe")), await txt(page, "#biblioListe"));
@@ -236,7 +236,7 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Colle supprimee (confirmation en deux clics)", (await page.locator("#biblioColles .prod").count()) === 1);
   verif("Derniere colle : impossible de la supprimer", await (async () => { await page.locator('#biblioColles .prod button[data-a="del"]').click(); return (await page.locator("#biblioColles .prod").count()) === 1 && /au moins une colle/.test(await txt(page, "#toast")); })());
   await page.click("#compteBtn");
-  verif("Se deconnecter : retour en lecture seule", (await txt(page, "#etatCompte")) === "Lecture seule");
+  verif("Se deconnecter : plus d'adresse affichee", (await txt(page, "#etatCompte")) === "");
   await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true });
   await c.close();
 });
@@ -308,7 +308,7 @@ await step("Telephone et theme sombre", async () => {
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.28", /Membrane v1\.28/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.29", /Membrane v1\.29/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");

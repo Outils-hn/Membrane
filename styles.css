@@ -154,7 +154,8 @@ input:focus-visible, select:focus-visible, button:focus-visible, summary:focus-v
 .tot td { font-weight: 600; }
 
 footer { max-width: 1440px; margin: 0 auto; padding: 8px 16px 28px; text-align: center; color: var(--muted); font-size: 12.5px; }
-footer a, footer button { color: inherit; background: none; border: 0; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
+footer a, footer button { color: inherit; background: none; border: 0; padding: 0; font: inherit; text-decoration: none; text-underline-offset: 2px; cursor: pointer; transition: color .15s; }
+footer a:hover, footer button:hover { color: var(--ink); text-decoration: underline; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0; pointer-events: none; background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 14px; transition: .2s; z-index: 50; }
 .toast.on { opacity: 1; transform: translateX(-50%); }
 
@@ -265,3 +266,4 @@ dialog a { color: inherit; }
 @keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
+.etat-compte:empty { display: none; }
