@@ -2,6 +2,11 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.29 — 14 novembre 2026
+
+- Nouveauté : en bas de page, le lien « Conçu par… » devient « À propos » ; les noms sont dans la fenêtre qui s'ouvre. Les liens du pied de page ont partout la même présentation (soulignés au survol seulement).
+- Nouveauté : l'indication « Lecture seule » en haut de page disparaît.
+
 ## 1.28 — 14 novembre 2026
 
 - Nouveauté : la liste des raccourcis clavier s'ouvre maintenant depuis le pied de page (lien « Raccourcis »), comme dans Check, et ne se trouve plus dans le sélecteur d'applis.
