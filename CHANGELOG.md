@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.28 — 14 novembre 2026
+
+- Nouveauté : la liste des raccourcis clavier s'ouvre maintenant depuis le pied de page (lien « Raccourcis »), comme dans Check, et ne se trouve plus dans le sélecteur d'applis.
+
 ## 1.27 — 11 novembre 2026
 
 - Nouveauté : l'appli est réservée aux comptes de l'équipe. Sans compte, on passe par l'Accueil pour se connecter, puis on revient directement ici.
