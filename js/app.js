@@ -11,10 +11,10 @@ const APPLIS = [
   ["Linear", "Mise en barre", "#2B50FF"],
   ["Format", "Débit de panneaux", "#FF4D00"],
   ["Joint", "Dilatation et joints", "#0B7285"],
-  ["Maquette", "Maquettes IFC", "#4D7C0F"],
   ["Masse", "Poids des éléments", "#9A4A3A"],
   ["Membrane", "Étanchéité", "#B45309"],
   ["Strate", "Épaisseurs d'isolation", "#D4A20B"],
+  ["Maquette", "Maquettes IFC", "#4D7C0F"],
 ];
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
