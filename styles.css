@@ -1,5 +1,8 @@
 /* Membrane - style « Epure » de la famille (blanc casse, encre, cartes blanches a fin filet).
    Couleur propre a Membrane : l'orange de la colle. */
+/* Polices Geist embarquees (licence OFL, voir fonts/OFL.txt) : l'appli garde son aspect sans reseau. */
+@font-face { font-family: "Geist"; src: url("fonts/Geist-wght.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/GeistMono-wght.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 :root {
   --bg: #fbfbfa; --surface: #ffffff; --sunk: #f4f4f2; --field: #ffffff;
   --ink: #1f2026; --muted: #676a72; --line: #e8e8e5; --line-strong: #d4d4cf;
