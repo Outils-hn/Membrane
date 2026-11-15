@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.31 — 15 novembre 2026
+
+- Nouveauté : le menu des applis propose maintenant Maquette (visionneuse de maquettes IFC).
+
 ## 1.30 — 14 novembre 2026
 
 - Nouveauté : le lien « Suggestion / bug » du pied de page transmet maintenant la bonne version de l'appli à l'Accueil.
