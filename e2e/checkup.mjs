@@ -1,6 +1,7 @@
 // Check-up automatique de Membrane dans un vrai navigateur (donnees du navigateur vierges).
 // Resultat : checkup.txt (OK / ECHEC) + captures d'ecran.
 import { chromium } from "playwright";
+import AxeBuilder from "@axe-core/playwright";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { PRODUITS_DEFAUT } from "../js/core.js";
 
@@ -304,6 +305,16 @@ await step("Telephone et theme sombre", async () => {
   verif("Theme sombre applique", (await sombre.page.evaluate(() => document.documentElement.dataset.theme)) === "dark");
   await sombre.page.screenshot({ path: `${OUT}/05-sombre.png`, fullPage: true });
   await sombre.c.close();
+});
+
+await step("Accessibilite (axe) : aucun defaut grave, theme clair et sombre", async () => {
+  for (const sombre of [false, true]) {
+    const { c, page } = await ouvrir({ sombre: sombre });
+    const axe = await new AxeBuilder({ page }).analyze();
+    const graves = axe.violations.filter((v) => v.impact === "critical" || v.impact === "serious");
+    verif(`Accessibilite ${sombre ? "theme sombre" : "theme clair"} : aucun defaut grave`, !graves.length, graves.map((v) => `${v.id} ${v.nodes.length} : ${v.nodes.slice(0, 5).map((x) => x.target.join(" ") + " " + (x.any[0]?.data?.contrastRatio ?? "")).join(" ; ")}`).join(", "));
+    await c.close();
+  }
 });
 
 await step("Pied de page et menu des applis", async () => {
