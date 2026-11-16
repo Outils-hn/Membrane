@@ -1,6 +1,7 @@
 // Check-up automatique de Membrane dans un vrai navigateur (donnees du navigateur vierges).
 // Resultat : checkup.txt (OK / ECHEC) + captures d'ecran.
 import { chromium } from "playwright";
+import { detailsVisuels } from "./details.mjs";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { PRODUITS_DEFAUT } from "../js/core.js";
@@ -9,6 +10,7 @@ const BASE = process.env.APP_URL ?? "http://127.0.0.1:8090/";
 const OUT = process.argv[2] ?? "captures";
 mkdirSync(OUT, { recursive: true });
 const lignes = [];
+const lignesDetails = lignes;
 const verif = (nom, ok, detail = "") => lignes.push(`${ok ? "OK    " : "ECHEC "} ${nom}${detail ? ` (${detail})` : ""}`);
 const choisir = async (page, box, k) => { await page.locator(`${box} .sel-btn`).click(); await page.locator(`${box} .sel-pop button[data-k="${k}"]`).click(); };
 const step = async (nom, fn) => { try { await fn(); } catch (e) { verif(nom, false, e.message.split("\n")[0].slice(0, 180)); } };
@@ -77,7 +79,7 @@ await step("Ecran de depart : bande en Z de 12 m en Outdoor plus", async () => {
   await choisir(page, "#produitSel", "outplus");
   verif("Retour a Outdoor plus : sd 4 m, colle de nouveau comptee", /sd ≈ 4 m/.test(await txt(page, "#produitFiche")) && (await txt(page, "#rCart")) === "3", await txt(page, "#produitFiche"));
   verif("Pas de lignes tant qu'on n'a rien ajoute (le message d'attente est visible)", await page.locator("#cmdPlein").evaluate((el) => el.classList.contains("hidden")) && await page.locator("#cmdVide").isVisible());
-  await page.screenshot({ path: `${OUT}/01-depart.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/01-depart.png`, fullPage: true }); await detailsVisuels(page, "01-depart.png", lignesDetails);
   await c.close();
 });
 
@@ -124,7 +126,7 @@ await step("Largeurs : standard, sur mesure, produits, alertes", async () => {
   await page.fill("#longueur", "");
   verif("Longueur vide : pas de resultat, ajout impossible", (await txt(page, "#rCart")) === "—" && (await page.locator("#ajouter").isDisabled()));
   await page.fill("#longueur", "30");
-  await page.screenshot({ path: `${OUT}/02-largeurs.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/02-largeurs.png`, fullPage: true }); await detailsVisuels(page, "02-largeurs.png", lignesDetails);
   verif("30 m : 2 rouleaux", (await txt(page, "#rRoul")) === "2", await txt(page, "#rRoul"));
   await c.close();
 });
@@ -238,7 +240,7 @@ await step("Bibliotheque : largeurs, produit d'un autre fournisseur, fiche Index
   verif("Derniere colle : impossible de la supprimer", await (async () => { await page.locator('#biblioColles .prod button[data-a="del"]').click(); return (await page.locator("#biblioColles .prod").count()) === 1 && /au moins une colle/.test(await txt(page, "#toast")); })());
   await page.click("#compteBtn");
   verif("Se deconnecter : plus d'adresse affichee", (await txt(page, "#etatCompte")) === "");
-  await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/06-bibliotheque.png`, fullPage: true }); await detailsVisuels(page, "06-bibliotheque.png", lignesDetails);
   await c.close();
 });
 
@@ -268,7 +270,7 @@ await step("Commande : ajouter, classer, modifier, supprimer, totaux", async () 
   verif("Mise a jour : 26 m + 12 m + 12 m, la piece de 1,1 m ne tient pas dans le reste : 3 rouleaux", /Outdoor plus, 250 mm, rouleau de 25 m 3 50,0 m de bande \+ 0,20 m de recouvrement/.test(await txt(page, "#cmdTotal")), await txt(page, "#cmdTotal"));
   await page.locator("#cmdLignes button[data-a='del']").first().click();
   verif("Supprimer enleve une ligne", (await page.locator("#cmdLignes tbody tr").count()) === 2);
-  await page.screenshot({ path: `${OUT}/03-commande.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/03-commande.png`, fullPage: true }); await detailsVisuels(page, "03-commande.png", lignesDetails);
   await page.reload({ waitUntil: "load" });
   verif("La commande est retrouvee apres rechargement", (await page.locator("#cmdLignes tbody tr").count()) === 2);
   await page.click("#viderBtn");
@@ -303,7 +305,7 @@ await step("Telephone et theme sombre", async () => {
   await tel.c.close();
   const sombre = await ouvrir({ sombre: true });
   verif("Theme sombre applique", (await sombre.page.evaluate(() => document.documentElement.dataset.theme)) === "dark");
-  await sombre.page.screenshot({ path: `${OUT}/05-sombre.png`, fullPage: true });
+  await sombre.page.screenshot({ path: `${OUT}/05-sombre.png`, fullPage: true }); await detailsVisuels(sombre.page, "05-sombre.png", lignesDetails);
   await sombre.c.close();
 });
 
