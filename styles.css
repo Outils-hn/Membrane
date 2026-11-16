@@ -272,5 +272,5 @@ dialog a { color: inherit; }
 .etat-compte:empty { display: none; }
 
 /* Coupes de ligne soignees : pas de mot isole en fin de phrase, titres equilibres */
-p, li, dd, figcaption, .hint, .note, .vide { text-wrap: pretty; }
+p, li, dd, td, th, figcaption, .hint, .note, .vide, .pm { text-wrap: pretty; }
 h1, h2, h3, h4 { text-wrap: balance; }
