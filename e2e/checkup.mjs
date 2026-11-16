@@ -321,7 +321,7 @@ await step("Accessibilite (axe) : aucun defaut grave, theme clair et sombre", as
 
 await step("Pied de page et menu des applis", async () => {
   const { c, page } = await ouvrir();
-  verif("Pied de page : version 1.33", /Membrane v1\.33/.test(await txt(page, "footer")), await txt(page, "footer"));
+  verif("Pied de page : version 1.34", /Membrane v1\.34/.test(await txt(page, "footer")), await txt(page, "footer"));
   await page.click("#aboutBtn"); verif("Clic sur la signature : fenetre « À propos » (nom, version)", await page.locator("#dApropos[open]").count() === 1 && /À propos/.test(await txt(page, "#dApropos")) && /Version /.test(await txt(page, "#dApropos")), await txt(page, "#dApropos")); await page.click("#daFermer"); verif("La fenetre se ferme", await page.locator("#dApropos[open]").count() === 0);
   await page.click("#appsMenu summary");
   const menu = await txt(page, "#appsList");
