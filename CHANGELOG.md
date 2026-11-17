@@ -2,6 +2,10 @@
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 1.35 — 17 novembre 2026
+
+- Nouveauté : dans « À propos », ajout de « Imaginé par Hugo A. ».
+
 ## 1.34 — 16 novembre 2026
 
 - Nouveauté : petites retouches d'affichage : plus de mot isolé à la fin des phrases et des listes, titres mieux équilibrés.
